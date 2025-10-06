@@ -77,7 +77,10 @@
             "extra_option": { "CalibStridedMinMax": 4 }
         },
         "gab": {
-            "type": "QairtGenAIModelBuilder"
+            "type": "QairtGenAIModelBuilder",
+            "backend": "HTP",
+            "soc_details": "dsp_arch:v81",
+            "weight_sharing": true
         }
     },
     "target": "qnn_system",
