@@ -1,89 +1,50 @@
 {
-    "input_model": { "type": "HfModel", "model_path": "microsoft/Phi-3.5-mini-instruct" },
-    "systems": {
-        "qnn_system": {
-            "type": "PythonEnvironment",
-            "python_environment_path": "/local/mnt2/workspace/kromero/olive-recipes/olive-recipes/microsoft-Phi-3.5-mini-instruct/QAIRT/phi35-venv/bin",
-            "accelerators": [ { "execution_providers": [ "QNNExecutionProvider" ] } ]
-        }
+    "input_model": { 
+        "type": "QairtPreparedModel", 
+        "model_path": "/local/mnt2/workspace/kromero/models/HF-Microsoft-Phi-3.5-mini-instruct"
     },
     "data_configs": [
         {
-            "name": "wikitext2_train_joined",
+            "name": "wikitext2_eval",
             "type": "HuggingfaceContainer",
-            "load_dataset_config": { "data_name": "wikitext", "subset": "wikitext-2-raw-v1", "split": "train" },
+            "load_dataset_config": {
+                "data_name": "wikitext",
+                "subset": "wikitext-2-raw-v1", 
+                "split": "train"
+            },
             "pre_process_data_config": {
+                "model_name": "microsoft/Phi-3.5-mini-instruct",
                 "strategy": "join",
                 "add_special_tokens": false,
                 "max_seq_len": 4096,
                 "max_samples": 128
             }
-        },
-        {
-            "name": "wikitext2_train_act",
-            "type": "HuggingfaceContainer",
-            "load_dataset_config": { "data_name": "wikitext", "subset": "wikitext-2-raw-v1", "split": "train" },
-            "pre_process_data_config": {
-                "strategy": "line-by-line",
-                "add_special_tokens": true,
-                "max_samples": 256,
-                "max_seq_len": 4096
-            }
         }
     ],
     "passes": {
-        "q": { "type": "QuaRot" },
-        "g": {
-            "type": "GptqModel",
-            "bits": 4,
-            "sym": true,
-            "group_size": -1,
-            "lm_head": false,
-            "device": "cuda",
-            "data_config": "wikitext2_train_joined"
-        },
-        "mb": {
-            "type": "ModelBuilder",
-            "precision": "int4",
-            "int4_block_size": 32,
-            "int4_accuracy_level": 4,
-            "int4_op_types_to_quantize": [ "MatMul", "Gather" ]
-        },
-        "mq": {
-            "type": "MatMulNBitsToQDQ",
-            "use_int4": true,
-            "add_zero_point": true,
-            "nodes_to_exclude": [ "/lm_head/MatMul_Q4" ],
-            "save_as_external_data": true
-        },
-        "gs": {
-            "type": "GraphSurgeries",
-            "surgeries": [
-                { "surgeon": "RemoveRopeMultiCache" },
-                { "surgeon": "AttentionMaskToSequenceLengths" },
-                { "surgeon": "SimplifiedLayerNormToL2Norm" }
-            ],
-            "save_as_external_data": true
-        },
-        "sq": {
-            "type": "OnnxStaticQuantization",
-            "data_config": "wikitext2_train_act",
-            "activation_type": "uint16",
-            "precision": "uint8",
-            "calibration_providers": [ "CUDAExecutionProvider" ],
-            "quant_preprocess": true,
-            "op_types_to_exclude": [ "GatherBlockQuantized", "GroupQueryAttention", "MatMulNBits" ],
-            "save_as_external_data": true,
-            "extra_option": { "CalibStridedMinMax": 4 }
-        },
-        "gab": {
-            "type": "QairtGenAIModelBuilder",
+        "qgab": {
+            "type": "QairtGenAIBuilder",
             "backend": "HTP",
-            "soc_details": "dsp_arch:v81",
-            "weight_sharing": true
+            "soc_details": "chipset:SC8380XP",
+            "cache_dir": "./cache/qairt",
+            "log_level": "debug"
         }
     },
-    "target": "qnn_system",
+    "evaluators": {
+        "evaluator": {
+            "type": "QairtContainerEvaluator",
+            "metrics": [
+                { 
+                    "name": "latency", 
+                    "type": "latency", 
+                    "sub_types": [ { "name": "avg" } ], 
+                    "data_config": "wikitext2_eval" 
+                }
+            ]
+        }
+    },
+    "evaluator": "evaluator",
+    "evaluate_input_model": false,
     "log_severity_level": 1,
     "output_dir": "models/phi3_5-qnn",
     "cache_dir": "cache",

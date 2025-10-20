@@ -15,12 +15,12 @@ else
     echo "Virtual environment directory DNE: $VENV_DIR"
 fi
 
-uv venv -p 3.12 $VENV_DIR
+uv venv -p 3.10 $VENV_DIR
 source $VENV_DIR/bin/activate
 
 uv pip install -r requirements.txt
 
-uv pip install --no-build-isolation git+https://github.com/ModelCloud/GPTQModel.git@558449bed3ef2653c36041650d30da6bbbca440d
+uv pip install ../../../../olive/Olive/dist/olive_ai-0.10.0.dev0-py3-none-any.whl
 
-uv pip install ../../../../olive/Olive/dist/olive_ai-0.10.0.dev0-py3-none-any.whl[qairt] 
+uv pip install qairt_dev-0.1.0.dev0-py3-none-manylinux2014_x86_64.whl[onnx]
 
