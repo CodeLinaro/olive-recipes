@@ -1,7 +1,7 @@
 {
     "input_model": { 
         "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace/kromero/models/HF-Microsoft-Phi-3.5-mini-instruct"
+        "model_path": "/local/mnt2/workspace/kromero/models/phi35-nb1-20251030"
     },
     "passes": {
         "qgab": {
@@ -13,7 +13,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/phi3_5-qnn",
+    "output_dir": "models/phi3_5-qnn-htp-hamoa",
     "cache_dir": "cache",
     "no_artifacts": true
 }

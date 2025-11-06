@@ -1,0 +1,19 @@
+{
+    "input_model": { 
+        "type": "QairtPreparedModel", 
+        "model_path": "/local/mnt2/workspace/kromero/models/phi35-nb1-20251030"
+    },
+    "passes": {
+        "qgab": {
+            "type": "QairtGenAIBuilder",
+            "backend": "HTP",
+            "soc_details": "chipset:SC8480XP",
+            "cache_dir": "./cache/qairt",
+            "log_level": "debug"
+        }
+    },
+    "log_severity_level": 1,
+    "output_dir": "models/phi3_5-qnn-htp-glymur-lade",
+    "cache_dir": "cache",
+    "no_artifacts": true
+}

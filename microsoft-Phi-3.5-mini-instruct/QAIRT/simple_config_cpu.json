@@ -1,0 +1,15 @@
+{
+    "input_model": { "type": "HfModel", "model_path": "microsoft/Phi-3.5-mini-instruct" },
+    "passes": {
+        "qgab": {
+            "type": "QairtGenAIBuilder",
+            "backend": "CPU",
+            "cache_dir": "./cache/qairt",
+            "log_level": "debug"
+        }
+    },
+    "log_severity_level": 1,
+    "output_dir": "models/phi3_5-qnn-cpu",
+    "cache_dir": "cache",
+    "no_artifacts": true
+}

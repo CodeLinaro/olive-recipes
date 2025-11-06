@@ -22,5 +22,7 @@ uv pip install -r requirements.txt
 
 uv pip install ../../../../olive/Olive/dist/olive_ai-0.10.0.dev0-py3-none-any.whl
 
-uv pip install qairt_dev-0.1.0.dev0-py3-none-manylinux2014_x86_64.whl[onnx]
+uv pip install qairt-dev[onnx]
+
+export QAIRT_SDK_ROOT=/opt/qcom/aistack/qairt/2.40.0.251030/
 
