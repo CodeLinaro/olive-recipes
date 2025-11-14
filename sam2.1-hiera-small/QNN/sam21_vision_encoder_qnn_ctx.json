@@ -69,20 +69,6 @@
         }
     },
     "passes": {
-        "surgeries": {
-            "type": "GraphSurgeries",
-            "surgeries": [
-                {
-                    "surgeon": "RenameInputs",
-                    "old_names": [
-                        "input.1"
-                    ],
-                    "new_names": [
-                        "pixel_values"
-                    ]
-                }
-            ]
-        },
         "quantization": {
             "type": "OnnxStaticQuantization",
             "data_config": "quantize_data_config",
