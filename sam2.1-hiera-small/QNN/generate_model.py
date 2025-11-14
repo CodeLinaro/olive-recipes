@@ -290,18 +290,18 @@ class SAM2Encoder(nn.Module):
         super().__init__()
         self.model = sam2
         self._bb_feat_sizes = [
-            (256, 256),
-            (128, 128),
-            (64, 64),
+            (32, 256, 256),
+            (64, 128, 128),
+            (256, 64, 64),
         ]
         for i, block in enumerate(self.model.image_encoder.trunk.blocks):
             self.model.image_encoder.trunk.blocks[i] = ModMultiScaleBlock(block)
 
-    def forward(self, Image: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """Run SAM2 Image encoder and returns image_embeddings, high_res_features1, high_res_features2.
+    def forward(self, input: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """Run SAM2 input encoder and returns image_embeddings, high_res_features1, high_res_features2.
 
         Args:
-            Image:
+            input:
                 Raw floating point pixel values for encoder consumption.
                 3-channel Color Space: RGB, range [0, 1]
 
@@ -311,15 +311,14 @@ class SAM2Encoder(nn.Module):
                 high_res_features2: Shape (1, 64, 128, 128)
 
         """
-        # x = self.normalize(Image)
-        x = Image
+        x = input
         backbone_out = self.model.forward_image(x)
         _, vision_feats, _, _ = self.model._prepare_backbone_features(backbone_out)
         # Add no_mem_embed, which is added to the lowest rest feat. map during training on videos
         if self.model.directly_add_no_mem_embed:
             vision_feats[-1] = vision_feats[-1] + self.model.no_mem_embed
         feats = [
-            feat.permute(1, 2, 0).view(1, -1, *feat_size)
+            feat.permute(1, 2, 0).view(1, *feat_size)
             for feat, feat_size in zip(vision_feats[::-1], self._bb_feat_sizes[::-1])
         ][::-1]
         image_embeddings = feats[2]
@@ -342,13 +341,70 @@ class SAM2Decoder(nn.Module):
         self.mask_decoder = self.model.sam_mask_decoder
         self.prompt_encoder = self.model.sam_prompt_encoder
 
+    def _embed_masks(
+        self, input_mask: torch.Tensor, has_mask_input: torch.Tensor
+    ) -> torch.Tensor:
+        mask_embedding = has_mask_input * self.prompt_encoder.mask_downscaling(
+            input_mask
+        )
+        mask_embedding = mask_embedding + (
+            1 - has_mask_input
+        ) * self.prompt_encoder.no_mask_embed.weight.reshape(1, -1, 1, 1)
+        return mask_embedding
+
+    
+    def _embed_points(
+        self,
+        points: torch.Tensor,
+        labels: torch.Tensor
+    ) -> torch.Tensor:
+        """Embeds point prompts."""
+        points = points + 0.5  # Shift to center of pixel
+        padding_point = torch.zeros((points.shape[0], 1, 2), device=points.device)
+        padding_label = -torch.ones((labels.shape[0], 1), device=labels.device)
+        points = torch.cat([points, padding_point], dim=1)
+        labels = torch.cat([labels, padding_label], dim=1)
+        
+        point_embedding = self.prompt_encoder.pe_layer.forward_with_coords(
+            points, self.prompt_encoder.input_image_size
+        )
+
+        point_embedding = torch.where(
+            (labels == -1).unsqueeze(-1),
+            torch.zeros_like(point_embedding) + self.prompt_encoder.not_a_point_embed.weight,
+            point_embedding,
+        )
+        point_embedding = torch.where(
+            (labels == 0).unsqueeze(-1),
+            point_embedding + self.prompt_encoder.point_embeddings[0].weight,
+            point_embedding,
+        )
+        point_embedding = torch.where(
+            (labels == 1).unsqueeze(-1),
+            point_embedding + self.prompt_encoder.point_embeddings[1].weight,
+            point_embedding,
+        )
+        point_embedding = torch.where(
+            (labels == 2).unsqueeze(-1),
+            point_embedding + self.prompt_encoder.point_embeddings[2].weight,
+            point_embedding,
+        )
+        point_embedding = torch.where(
+            (labels == 3).unsqueeze(-1),
+            point_embedding + self.prompt_encoder.point_embeddings[3].weight,
+            point_embedding,
+        )
+        return point_embedding
+    
     def forward(
         self,
         image_embeddings: torch.Tensor,  # [1,256,64,64]
         high_res_features1: torch.Tensor,  # [1, 32, 256, 256]
         high_res_features2: torch.Tensor,  # [1, 64, 128, 128]
-        unnorm_coords: torch.Tensor,  # [num_labels,num_points,2]
-        labels: torch.Tensor,  # [num_labels,num_points]
+        point_coords: torch.Tensor,  # [num_labels,num_points,2]
+        point_labels: torch.Tensor,  # [num_labels,num_points]
+        mask_input: torch.Tensor, # [1, 1, 256, 256]
+        has_mask_input: torch.Tensor # [1]
     ) -> tuple[torch.Tensor, torch.Tensor]:
         """Run SAM2 lightweight decoder and return generated mask for given points.
 
@@ -359,22 +415,24 @@ class SAM2Decoder(nn.Module):
                 First set of high-resolution features.
             high_res_features2: torch.Tensor of shape [1, high_res_2_dim, high_res_2_size, high_res_2_size]
                 Second set of high-resolution features.
-            unnorm_coords: torch.Tensor of shape [1, k, 2]
+            point_coords: torch.Tensor of shape [1, k, 2]
                 Point coordinates from input image for segmentation, mapped to the resized image
-            labels: torch.Tensor of shape [1, k]
+            point_labels: torch.Tensor of shape [1, k]
                 Point Labels to select/de-select given point for segmentation
                 e.g. Corresponding value is 1 if this point is to be included, otherwise 0
-
+            mask_input: torch.Tensor of shape [1, 1, 256, 256]
+                Mask corresponding to focus area
+            has_mask_input: torch.Tensor of shape [1]
+                1 if Mask provided, else 0
         Returns:
             masks: torch.Tensor of shape [1, 1, 256, 256]
             scores: torch.Tensor of shape [1, 1]
 
         """
-        sparse_embedding, dense_embedding = self.prompt_encoder(
-            points=(unnorm_coords, labels),
-            boxes=None,
-            masks=None,
-        )
+
+        sparse_embedding = self._embed_points(point_coords, point_labels)
+        dense_embedding = self._embed_masks(mask_input, has_mask_input)
+        
         low_res_masks, iou_predictions, _, _ = self.mask_decoder.predict_masks(
             image_embeddings=image_embeddings,
             image_pe=self.prompt_encoder.get_dense_pe(),
@@ -383,7 +441,8 @@ class SAM2Decoder(nn.Module):
             repeat_image=False,
             high_res_features=[high_res_features1, high_res_features2],
         )
-        return low_res_masks, iou_predictions
+        masks = F.interpolate(low_res_masks, size=(1024, 1024), mode="bilinear", align_corners=False)
+        return masks, iou_predictions, low_res_masks 
 
 
 model_weights_url = "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_small.pt"
@@ -402,19 +461,12 @@ def main():
     sam2_model = build_sam2(model_cfg, checkpoint, device="cpu")
     encoder = SAM2Encoder(sam2_model)
     decoder = SAM2Decoder(sam2_model)
-    en_inputs = {"Image": torch.rand((1, 3, 1024, 1024))}
-    de_inputs = {
-        "image_embeddings": torch.rand([1, 256, 64, 64]),
-        "high_res_features1": torch.rand([1, 32, 256, 256]),
-        "high_res_features2": torch.rand((1, 64, 128, 128)),
-        "unnorm_coords": torch.randn((1, 5, 2)),
-        "labels": torch.ones((1, 5)),
-    }
+    
+    en_inputs = {"input": torch.rand((1, 3, 1024, 1024))}
 
     with torch.no_grad():
-        torch.onnx.export(encoder, en_inputs, "sam21_vision_encoder.onnx", opset_version=20, do_constant_folding=True, dynamo = False)
-    with torch.no_grad():
-        torch.onnx.export(decoder, de_inputs, "sam21_mask_decoder.onnx", opset_version=20, do_constant_folding=True, dynamo = False)
+        torch.onnx.export(encoder, en_inputs, "sam21_vision_encoder.onnx", opset_version=20, do_constant_folding=True,
+                          dynamo = False, input_names = list(en_inputs.keys()))
 
     encoder_onnx_model = onnx.load("sam21_vision_encoder.onnx")
     simplified_encoder_onnx_model, check = simplify(encoder_onnx_model)
@@ -422,6 +474,18 @@ def main():
     if check:
         onnx.save(simplified_encoder_onnx_model, "sam21_vision_encoder.onnx")
 
+    de_inputs = {
+        "image_embeddings": torch.rand([1, 256, 64, 64]),
+        "high_res_features1": torch.rand([1, 32, 256, 256]),
+        "high_res_features2": torch.rand((1, 64, 128, 128)),
+        "point_coords": torch.randn((1, 5, 2)),
+        "point_labels": torch.ones((1, 5)),
+        "mask_input": torch.zeros((1, 1, 256, 256)),
+        "has_mask_input": torch.zeros([1])
+    }
+    with torch.no_grad():
+        torch.onnx.export(decoder, de_inputs, "sam21_mask_decoder.onnx", opset_version=20, do_constant_folding=True,
+                          dynamo = False, input_names = list(de_inputs.keys()))
     decoder_onnx_model = onnx.load("sam21_mask_decoder.onnx")
     simplified_decoder_onnx_model, check = simplify(decoder_onnx_model)
 
