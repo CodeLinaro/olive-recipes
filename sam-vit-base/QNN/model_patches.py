@@ -296,7 +296,7 @@ class ModSamVisionLayer(nn.Module):
         hidden_states = residual + hidden_states
         layernorm_output = self.model.layer_norm2(hidden_states)
         hidden_states = hidden_states + self.mlp(layernorm_output)
-        return hidden_states
+        return hidden_states, attn_weights
 
 
 class ModSamModel(nn.Module):
