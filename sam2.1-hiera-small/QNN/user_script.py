@@ -117,4 +117,4 @@ def ve_generate_quant_data(num_samples):
         image = sample["image"]
         inputs = processor(image, return_tensors="pt")
         pixel_values = inputs["pixel_values"].detach().cpu().numpy()
-        np.savez(f"{ModelConfig.data_dir}/input_{i}_images.npz", pixel_values=pixel_values)
+        np.savez(f"{ModelConfig.data_dir}/input_{i}_images.npz", input=pixel_values)
