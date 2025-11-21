@@ -1,0 +1,110 @@
+{
+    "input_model": {
+        "type": "ONNXModel",
+        "model_path": "sam21_mask_decoder.onnx"
+    },
+    "systems": {
+        "local_system": {
+            "type": "LocalSystem",
+            "accelerators": [
+                {
+                    "device": "gpu",
+                    "execution_providers": [
+                        "CUDAExecutionProvider"
+                    ]
+                }
+            ]
+        },
+        "target_system": {
+            "type": "PythonEnvironment",
+            "python_environment_path": "/path/to/qnn/env/bin",
+            "accelerators": [
+                {
+                    "execution_providers": [
+                        "QNNExecutionProvider"
+                    ]
+                }
+            ]
+        }
+    },
+    "data_configs": [
+        {
+            "name": "latency_data_config",
+            "user_script": "user_script.py",
+            "load_dataset_config": {
+                "type": "local_dataset"
+            },
+            "dataloader_config": {
+                "type": "md_data_loader",
+                "batch_size": 1
+            }
+        },
+        {
+            "name": "quantize_data_config",
+            "user_script": "user_script.py",
+            "load_dataset_config": {
+                "type": "local_dataset"
+            },
+            "dataloader_config": {
+                "type": "md_quantize_data_loader",
+                "data_num": 200,
+                "point_p": 0.3,
+                "mask_p": 0.2
+            }
+        }
+    ],
+    "passes": {
+        "f16": {
+            "type": "OnnxFloatToFloat16",
+            "keep_io_types": true,
+            "save_as_external_data": true,
+            "node_include_list": ["/Add", "/Concat", "/Concat_1", "/Gather", 
+                "/Div", "/Reshape", "/ScatterND", "/Gather_2", 
+                "/Div_1", "/Reshape_1", "/ScatterND_1", "/Mul_6", 
+                "/Sub", "/MatMul", "/Mul_7", "/Sin", "/Cos", 
+                "/Concat_6", "/Equal_6", "/Unsqueeze_6", "/Where_6", 
+                "/Equal_7", "/Unsqueeze_7", "/Add_1", "/Where_7", 
+                "/Equal_8", "/Unsqueeze_8", "/Add_2", "/Where_8", 
+                "/Equal_9", "/Unsqueeze_9", "/Add_3", "/Where_9", 
+                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10"]
+        },
+        "sq": {
+            "type": "OnnxStaticQuantization",
+            "data_config": "quantize_data_config",
+            "activation_type": "uint8",
+            "precision": "uint8",
+            "calibration_providers": [ "CUDAExecutionProvider" ],
+            "calibrate_method": "MinMax",
+            "quant_preprocess": true,
+            "op_types_to_exclude": ["Cast"],
+            "save_as_external_data": true,
+            "nodes_to_exclude":["/Add", "/Concat", "/Concat_1", "/Gather", 
+                "/Div", "/Reshape", "/ScatterND", "/Gather_2", 
+                "/Div_1", "/Reshape_1", "/ScatterND_1", "/Mul_6", 
+                "/Sub", "/MatMul", "/Mul_7", "/Sin", "/Cos", 
+                "/Concat_6", "/Equal_6", "/Unsqueeze_6", "/Where_6", 
+                "/Equal_7", "/Unsqueeze_7", "/Add_1", "/Where_7", 
+                "/Equal_8", "/Unsqueeze_8", "/Add_2", "/Where_8", 
+                "/Equal_9", "/Unsqueeze_9", "/Add_3", "/Where_9", 
+                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10"]
+        },
+        "cb": {
+            "type": "EPContextBinaryGenerator",
+            "provider_options": {
+                "htp_performance_mode": "burst",
+                "htp_graph_finalization_optimization_mode": "3",
+                "offload_graph_io_quantization": "0",
+                "soc_model": "60"
+            },
+            "weight_sharing": false
+        }
+    },
+    "host": "local_system",
+    "target": "target_system",
+    "log_severity_level": 0,
+    "ort_log_severity_level": 1,
+    "ort_py_log_severity_level": 1,
+    "cache_dir": "cache_decoder_mp",
+    "output_dir": "model/decoder_mp",
+    "no_artifacts": true
+}
