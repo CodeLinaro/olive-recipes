@@ -10,5 +10,5 @@ class ModelConfig:
     ve_input_name = "pixel_values"
     ve_channel_size = 3
     ve_sample_size = 1024
-    md_input_names = ("image_embeddings", "high_res_features1", "high_res_features2", "coords.1", "labels")
-    ms_input_shapes = ((1, 256, 64, 64), (1, 32, 256, 256), (1, 64, 128, 128), (1, 5, 2), (1, 5))
+    md_input_names = ("image_embeddings", "high_res_features1", "high_res_features2", "point_coords", "point_labels", "mask_input", "has_mask_input")
+    ms_input_shapes = ((1, 256, 64, 64), (1, 32, 256, 256), (1, 64, 128, 128), (1, 5, 2), (1, 5), (1, 1, 256, 256), [1])
