@@ -33,16 +33,17 @@ class GlobalVars:
     licenseCheck = 0
     venvRequirementsCheck = set()
 
-    olivePath = None
     oliveCheck = 0
     RuntimeToEPName = {
         RuntimeEnum.CPU: EPNames.CPUExecutionProvider,
         RuntimeEnum.QNN: EPNames.QNNExecutionProvider,
+        RuntimeEnum.QNNGPU: EPNames.QNNExecutionProvider,
         RuntimeEnum.IntelAny: EPNames.OpenVINOExecutionProvider,
         RuntimeEnum.IntelCPU: EPNames.OpenVINOExecutionProvider,
         RuntimeEnum.IntelNPU: EPNames.OpenVINOExecutionProvider,
         RuntimeEnum.IntelGPU: EPNames.OpenVINOExecutionProvider,
         RuntimeEnum.AMDNPU: EPNames.VitisAIExecutionProvider,
+        RuntimeEnum.AMDGPU: EPNames.MIGraphXExecutionProvider,
         RuntimeEnum.NvidiaGPU: EPNames.CUDAExecutionProvider,
         RuntimeEnum.NvidiaTRTRTX: EPNames.NvTensorRTRTXExecutionProvider,
         RuntimeEnum.DML: EPNames.DmlExecutionProvider,
@@ -51,11 +52,13 @@ class GlobalVars:
     RuntimeToOliveDeviceType = {
         RuntimeEnum.CPU: OliveDeviceTypes.CPU,
         RuntimeEnum.QNN: OliveDeviceTypes.NPU,
+        RuntimeEnum.QNNGPU: OliveDeviceTypes.GPU,
         RuntimeEnum.IntelAny: OliveDeviceTypes.Any,
         RuntimeEnum.IntelCPU: OliveDeviceTypes.CPU,
         RuntimeEnum.IntelNPU: OliveDeviceTypes.NPU,
         RuntimeEnum.IntelGPU: OliveDeviceTypes.GPU,
         RuntimeEnum.AMDNPU: OliveDeviceTypes.NPU,
+        RuntimeEnum.AMDGPU: OliveDeviceTypes.GPU,
         RuntimeEnum.NvidiaGPU: OliveDeviceTypes.GPU,
         RuntimeEnum.DML: OliveDeviceTypes.GPU,
         RuntimeEnum.WebGPU: OliveDeviceTypes.GPU,
@@ -63,11 +66,13 @@ class GlobalVars:
     RuntimeToDisplayName = {
         RuntimeEnum.CPU: "CPU",
         RuntimeEnum.QNN: "Qualcomm NPU",
+        RuntimeEnum.QNNGPU: "Qualcomm GPU",
         RuntimeEnum.IntelAny: "Intel Any",
         RuntimeEnum.IntelCPU: "Intel CPU",
         RuntimeEnum.IntelNPU: "Intel NPU",
         RuntimeEnum.IntelGPU: "Intel GPU",
         RuntimeEnum.AMDNPU: "AMD NPU",
+        RuntimeEnum.AMDGPU: "AMD GPU",
         RuntimeEnum.NvidiaGPU: "NVIDIA GPU",
         RuntimeEnum.NvidiaTRTRTX: "NVIDIA TensorRT for RTX",
         RuntimeEnum.DML: "DirectML",
@@ -227,6 +232,6 @@ def get_eval_runtime(runtime: RuntimeEnum, isLLM: bool) -> RuntimeEnum:
 
 
 def get_eval_in_execute_runtime(runtime: RuntimeEnum) -> RuntimeEnum:
-    if runtime == RuntimeEnum.QNN:
+    if runtime == RuntimeEnum.QNN or runtime == RuntimeEnum.QNNGPU:
         return RuntimeEnum.QNN
     raise ValueError(f"Unsupported runtime for eval in execute: {runtime}")

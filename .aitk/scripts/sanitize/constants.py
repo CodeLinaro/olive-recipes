@@ -89,6 +89,7 @@ class EPNames(Enum):
     CUDAExecutionProvider = "CUDAExecutionProvider"
     QNNExecutionProvider = "QNNExecutionProvider"
     OpenVINOExecutionProvider = "OpenVINOExecutionProvider"
+    MIGraphXExecutionProvider = "MIGraphXExecutionProvider"
     VitisAIExecutionProvider = "VitisAIExecutionProvider"
     NvTensorRTRTXExecutionProvider = "NvTensorRTRTXExecutionProvider"
     DmlExecutionProvider = "DmlExecutionProvider"
@@ -105,8 +106,9 @@ class OliveDeviceTypes(Enum):
 # Pass name is case insensitive, so we use lower case for all pass names
 # Should sort by value
 class OlivePassNames:
-    OnnxFloatToFloat16 = "onnxfloattofloat16"
     ModelBuilder = "modelbuilder"
+    NVModelOptQuantization = "nvmodeloptquantization"
+    OnnxFloatToFloat16 = "onnxfloattofloat16"
     OnnxConversion = "onnxconversion"
     OnnxDynamicQuantization = "onnxdynamicquantization"
     OnnxQuantization = "onnxquantization"
