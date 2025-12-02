@@ -47,9 +47,9 @@
             },
             "dataloader_config": {
                 "type": "md_quantize_data_loader",
-                "data_num": 200,
-                "point_p": 0.3,
-                "mask_p": 0.2
+                "data_num": 500,
+                "point_p": 0.0,
+                "mask_p": 0.0
             }
         }
     ],
@@ -66,7 +66,8 @@
                 "/Equal_7", "/Unsqueeze_7", "/Add_1", "/Where_7", 
                 "/Equal_8", "/Unsqueeze_8", "/Add_2", "/Where_8", 
                 "/Equal_9", "/Unsqueeze_9", "/Add_3", "/Where_9", 
-                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10"]
+                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10",
+                "/transformer/layers.0/norm1/LayerNormalization"]
         },
         "sq": {
             "type": "OnnxStaticQuantization",
@@ -74,7 +75,7 @@
             "activation_type": "uint8",
             "precision": "uint8",
             "calibration_providers": [ "CUDAExecutionProvider" ],
-            "calibrate_method": "MinMax",
+            "calibrate_method": "Percentile",
             "quant_preprocess": true,
             "op_types_to_exclude": ["Cast"],
             "save_as_external_data": true,
@@ -86,7 +87,8 @@
                 "/Equal_7", "/Unsqueeze_7", "/Add_1", "/Where_7", 
                 "/Equal_8", "/Unsqueeze_8", "/Add_2", "/Where_8", 
                 "/Equal_9", "/Unsqueeze_9", "/Add_3", "/Where_9", 
-                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10"]
+                "/Equal_10", "/Unsqueeze_10", "/Add_4", "/Where_10",
+                "/transformer/layers.0/norm1/LayerNormalization"]
         },
         "cb": {
             "type": "EPContextBinaryGenerator",
