@@ -1,7 +1,7 @@
 {
     "input_model": { 
         "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace/kromero/models/phi35-nb1-20251030"
+        "model_path": "/local/mnt2/workspace2/kromero/models/phi35-nb1-20251030"
     },
     "passes": {
         "qgab": {
@@ -13,7 +13,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/phi3_5-qnn-htp-glymur-lade",
+    "output_dir": "models/phi3_5-qnn-htp-glymur-lade-export",
     "cache_dir": "cache",
     "no_artifacts": true
 }
