@@ -1,0 +1,37 @@
+{
+    "input_model": {
+        "type": "ONNXModel",
+        "model_path": "sam21_mask_decoder.onnx"
+    },
+    "systems": {
+        "local_system": {
+            "type": "LocalSystem"
+        }
+    },
+    "passes": {
+        "f16": {
+            "type": "OnnxFloatToFloat16"
+        },
+        "surgeries" : {
+            "type": "GraphSurgeries",
+            "surgeries": [
+                {
+                    "surgeon": "MatMulAddToGemm"
+                },
+                {
+                    "surgeon": "RenameOutputs",
+                    "old_names": [ "1540", "1529" ],
+                    "new_names": [ "output_masks", "output_iou_predictions" ]
+                }
+            ]
+        }
+    },
+    "host": "local_system",
+    "target": "local_system",
+    "log_severity_level": 0,
+    "ort_log_severity_level": 1,
+    "ort_py_log_severity_level": 1,
+    "cache_dir": "cache_decoder",
+    "output_dir": "model/decoder",
+    "no_artifacts": true
+}

@@ -1,0 +1,28 @@
+{
+    "input_model": {
+        "type": "HfModel",
+        "model_path": "caidas/swin2SR-realworld-sr-x4-64-bsrgan-psnr",
+        "task": "image-to-image",
+        "io_config": {
+            "input_names": [ "pixel_values" ],
+            "input_shapes": [ [ 1, 3, 232, 232 ] ],
+            "output_names": [ "output" ]
+        }
+    },
+    "systems": {
+        "target_system": {
+            "type": "LocalSystem",
+            "accelerators": [ { "device": "gpu", "execution_providers": [ "QNNExecutionProvider" ] } ]
+        }
+    },
+    "passes": {
+        "conversion": { "device": "cpu", "type": "OnnxConversion", "target_opset": 20 },
+        "add_metadata": { "type": "AddOliveMetadata", "graph_name": "main_graph" }
+    },
+    "host": "target_system",
+    "target": "target_system",
+    "cache_dir": "cache",
+    "output_dir": "output",
+    "evaluate_input_model": false,
+    "clean_cache": true
+}

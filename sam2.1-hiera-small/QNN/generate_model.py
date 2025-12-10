@@ -3,6 +3,7 @@
 # Licensed under the MIT License.
 # --------------------------------------------------------------------------
 
+import argparse
 import os
 
 import onnx
@@ -99,7 +100,7 @@ class Conv2DInplaceLinear(nn.Module):
 
 
 class SplitHeadSAMEncoderAttention(nn.Module):
-    """SAM Attention block with the following modifications necessary to run on QNN.
+    """SAM Attention block with the following modifications necessary to run on QNN NPU.
 
     * Heads are split into separate ops, rather than all heads running in a single op.
     * QKV is unpacked from 1 tensor into 3 tensors.
@@ -176,6 +177,53 @@ class SplitHeadSAMEncoderAttention(nn.Module):
 
         return self.proj(x)
 
+class GpuSAMEncoderAttention(nn.Module):
+    """SAM Attention block with the following modifications necessary to run on QNN GPU."""
+
+    def __init__(self, attention_block) -> None:
+        super().__init__()
+        self.qkv = attention_block.qkv
+        self.proj = attention_block.proj
+        self.num_heads = attention_block.num_heads
+        self.q_pool = attention_block.q_pool
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        B, H, W, _ = x.shape
+
+        qkv = self.qkv(x)
+        if self.num_heads == 1:
+            # qkv with shape (B, H * W, 3, C)
+            qkv = qkv.reshape(B, H * W, 3, -1)
+            # q, k, v with shape (B, H * W, C)
+            q, k, v = torch.unbind(qkv, 2)
+        else:
+            # qkv with shape (B, H * W, 3, nHead, C)
+            qkv = qkv.reshape(B, H * W, 3, self.num_heads, -1)
+
+            # q, k, v with shape (B, H * W, nheads, C)
+            q, k, v = torch.unbind(qkv, 2)
+
+            k = k.reshape(B, H * W, self.num_heads, -1).permute(0, 2, 1, 3).reshape(B * self.num_heads, H * W, -1)
+            v = v.reshape(B, H * W, self.num_heads, -1).permute(0, 2, 1, 3).reshape(B * self.num_heads, H * W, -1)
+
+        # Q pooling (for downsample at stage changes)
+        if self.q_pool:
+            q = do_pool(q.reshape(B, H, W, -1), self.q_pool)
+            H, W = q.shape[1:3]  # downsampled shape
+
+        q = q.reshape(B, H * W, self.num_heads, -1).permute(0, 2, 1, 3).reshape(B * self.num_heads, H * W, -1)
+
+        x = F.scaled_dot_product_attention(q, k, v)
+
+        # Transpose back
+        x = x.reshape(B, self.num_heads, H * W, -1)
+        x = x.transpose(1, 2)
+        x = x.reshape(B, H, W, -1)
+
+        x = self.proj(x)
+
+        return x
+
 
 class Conv2DInplaceLinearSAMTransformerMLPBlock(nn.Module):
     """SAM MLPBlock that uses 1x1 Conv2D in place of linear layers."""
@@ -240,11 +288,14 @@ def window_unpartition(x, window_size, pad_hw, hw):
 
 
 class ModMultiScaleBlock(nn.Module):
-    def __init__(self, block):
+    def __init__(self, block, device):
         super().__init__()
         self.model = block
-        self.model.mlp = Conv2DInplaceLinearSAMTransformerMLPBlock(self.model.mlp)
-        self.model.attn = SplitHeadSAMEncoderAttention(self.model.attn)
+        if device == "npu":
+            self.model.mlp = Conv2DInplaceLinearSAMTransformerMLPBlock(self.model.mlp)
+            self.model.attn = SplitHeadSAMEncoderAttention(self.model.attn)
+        else:
+            self.model.attn = GpuSAMEncoderAttention(self.model.attn)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shortcut = x  # B, h, w, C
@@ -286,6 +337,7 @@ class SAM2Encoder(nn.Module):
     def __init__(
         self,
         sam2,
+        device,
     ) -> None:
         super().__init__()
         self.model = sam2
@@ -295,7 +347,7 @@ class SAM2Encoder(nn.Module):
             (256, 64, 64),
         ]
         for i, block in enumerate(self.model.image_encoder.trunk.blocks):
-            self.model.image_encoder.trunk.blocks[i] = ModMultiScaleBlock(block)
+            self.model.image_encoder.trunk.blocks[i] = ModMultiScaleBlock(block, device)
 
     def forward(self, input: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """Run SAM2 input encoder and returns image_embeddings, high_res_features1, high_res_features2.
@@ -352,7 +404,7 @@ class SAM2Decoder(nn.Module):
         ) * self.prompt_encoder.no_mask_embed.weight.reshape(1, -1, 1, 1)
         return mask_embedding
 
-    
+
     def _embed_points(
         self,
         points: torch.Tensor,
@@ -364,7 +416,7 @@ class SAM2Decoder(nn.Module):
         padding_label = -torch.ones((labels.shape[0], 1), device=labels.device)
         points = torch.cat([points, padding_point], dim=1)
         labels = torch.cat([labels, padding_label], dim=1)
-        
+
         point_embedding = self.prompt_encoder.pe_layer.forward_with_coords(
             points, self.prompt_encoder.input_image_size
         )
@@ -395,7 +447,7 @@ class SAM2Decoder(nn.Module):
             point_embedding,
         )
         return point_embedding
-    
+
     def forward(
         self,
         image_embeddings: torch.Tensor,  # [1,256,64,64]
@@ -432,7 +484,7 @@ class SAM2Decoder(nn.Module):
 
         sparse_embedding = self._embed_points(point_coords, point_labels)
         dense_embedding = self._embed_masks(mask_input, has_mask_input)
-        
+
         low_res_masks, iou_predictions, _, _ = self.mask_decoder.predict_masks(
             image_embeddings=image_embeddings,
             image_pe=self.prompt_encoder.get_dense_pe(),
@@ -442,7 +494,7 @@ class SAM2Decoder(nn.Module):
             high_res_features=[high_res_features1, high_res_features2],
         )
         masks = F.interpolate(low_res_masks, size=(1024, 1024), mode="bilinear", align_corners=False)
-        return masks, iou_predictions, low_res_masks 
+        return masks, iou_predictions, low_res_masks
 
 
 model_weights_url = "https://dl.fbaipublicfiles.com/segment_anything_2/092824/sam2.1_hiera_small.pt"
@@ -452,6 +504,10 @@ model_cfg = "sam2.1_hiera_s.yaml"
 
 
 def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", choices=["npu", "gpu"], default="npu")
+    args = parser.parse_args()
+
     download_file(model_weights_url, checkpoint)
     download_file(model_config_url, model_cfg)
 
@@ -459,9 +515,9 @@ def main():
     initialize(config_path="./", job_name="sam2_inference", version_base=None)
 
     sam2_model = build_sam2(model_cfg, checkpoint, device="cpu")
-    encoder = SAM2Encoder(sam2_model)
+    encoder = SAM2Encoder(sam2_model, args.device)
     decoder = SAM2Decoder(sam2_model)
-    
+
     en_inputs = {"input": torch.rand((1, 3, 1024, 1024))}
 
     with torch.no_grad():
