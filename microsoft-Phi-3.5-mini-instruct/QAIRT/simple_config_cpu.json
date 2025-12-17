@@ -6,6 +6,10 @@
             "backend": "CPU",
             "cache_dir": "./cache/qairt",
             "log_level": "debug"
+        },
+        "qe": {
+            "type": "QairtEncapsulation",
+            "log_level": "debug"
         }
     },
     "log_severity_level": 1,
