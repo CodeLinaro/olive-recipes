@@ -13,7 +13,8 @@
         },
         "qe": {
             "type": "QairtEncapsulation",
-            "log_level": "debug"
+            "log_level": "debug",
+            "run_checker": "true"
         }
     },
     "log_severity_level": 1,
