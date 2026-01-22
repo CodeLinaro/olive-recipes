@@ -34,7 +34,7 @@ uv pip install ../../../../olive/Olive/dist/olive_ai-0.11.0.dev0-py3-none-any.wh
 uv pip install qairt-dev[onnx]
 
 # Set QAIRT SDK root
-export QAIRT_SDK_ROOT=/local/mnt2/workspace2/kromero/sdks/2.43.0.260107/
+export QAIRT_SDK_ROOT=/local/mnt2/workspace2/kromero/sdks/2.44.0.260115-genie-custom/
 
 # Handle PYTHONPATH based on dev mode
 if $DEV_MODE; then
