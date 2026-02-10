@@ -97,6 +97,9 @@
                 "htp_graph_finalization_optimization_mode": "3",
                 "soc_model": "87"
             },
+            "run_options": {
+                "qnn.htp_perf_mode": "burst"
+            },
             "weight_sharing": false
         },
         "cp": { "type": "ComposeOnnxModels" }
