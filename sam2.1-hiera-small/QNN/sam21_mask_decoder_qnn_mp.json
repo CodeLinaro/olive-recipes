@@ -61,7 +61,7 @@
         "sq": {
             "type": "OnnxStaticQuantization",
             "data_config": "quantize_data_config",
-            "activation_type": "uint8",
+            "activation_type": "uint16",
             "precision": "uint8",
             "calibration_providers": [ "CUDAExecutionProvider" ],
             "calibrate_method": "Percentile",
