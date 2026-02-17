@@ -1,0 +1,38 @@
+{
+    "input_model": {
+        "type": "ONNXModel",
+        "model_path": "sam21_mask_decoder.onnx"
+    },
+    "systems": {
+        "host_system": {
+            "type": "LocalSystem"
+        }
+    },
+    "data_configs": [
+        {
+            "name": "latency_data_config",
+            "user_script": "user_script.py",
+            "load_dataset_config": {
+                "type": "local_dataset"
+            },
+            "dataloader_config": {
+                "type": "md_data_loader",
+                "batch_size": 1
+            }
+        }
+    ],
+    "passes": {
+        "f16": {
+            "type": "OnnxFloatToFloat16",
+            "save_as_external_data": true
+        }
+    },
+    "host": "host_system",
+    "target": "qnn_system",
+    "log_severity_level": 0,
+    "ort_log_severity_level": 1,
+    "ort_py_log_severity_level": 1,
+    "cache_dir": "cache_decoder_fp16_qdq",
+    "output_dir": "model/decoder_fp16_qdq",
+    "no_artifacts": true
+}

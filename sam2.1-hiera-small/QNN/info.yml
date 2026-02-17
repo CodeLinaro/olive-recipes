@@ -18,4 +18,19 @@ recipes:
     - npu
     ep: QNNExecutionProvider
 
+  - file: "sam21_mask_decoder_qnn_fp16.json"
+    device:
+    - npu
+    ep: QNNExecutionProvider
+    
+  - file: "sam21_mask_decoder_qnn_mp.json"
+    device:
+    - npu
+    ep: QNNExecutionProvider
+
+  - file: "sam21_vision_encoder_qnn.json"
+    devices:
+    - npu
+    ep: QNNExecutionProvider
+
 name: sam2.1-hiera-small

@@ -30,11 +30,31 @@ command -v python
 
 This command will return the path to the Python executable. Set the parent directory of the executable as the `/path/to/qnn/env/bin` in the config file.
 
+> ⚠️ Required only if Compilation is being done using Olive
+
 ### Generate ONNX Model
 Activate the **Quantization Python Environment** and run command to generate encoder and decoder models:
 
 ```bash
 python generate_model.py
+```
+
+### Run the Quantization to generate QDQ models
+Activate the **Quantization Python Environment** and run the workflow:
+
+For Encoder Model:
+```bash
+olive run --config sam21_vision_encoder_qnn.json
+```
+
+For Decoder Model with FP16 quantization:
+```bash
+olive run --config sam21_mask_decoder_qnn_fp16.json
+```
+
+For Decoder Model with Mixed Precision quantization:
+```bash
+olive run --config sam21_mask_decoder_qnn_mp.json
 ```
 
 ### Run the Quantization + Compilation Config
