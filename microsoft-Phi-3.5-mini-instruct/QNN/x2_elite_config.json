@@ -1,5 +1,5 @@
 {
-    "input_model": { "type": "HfModel", "model_path": "meta-llama/Llama-3.1-8B-Instruct" },
+    "input_model": { "type": "HfModel", "model_path": "microsoft/Phi-3.5-mini-instruct" },
     "systems": {
         "qnn_system": {
             "type": "PythonEnvironment",
@@ -33,28 +33,32 @@
     ],
     "passes": {
         "q": { "type": "QuaRot" },
+        "cs": { "type": "CaptureSplitInfo", "num_splits": 4, "unique_embeds_lm_head_splits": true },
         "g": {
             "type": "GptqModel",
             "bits": 4,
             "sym": true,
             "group_size": -1,
-            "lm_head": false,
+            "lm_head": true,
             "device": "cuda",
-            "data_config": "wikitext2_train_joined"
+            "data_config": "wikitext2_train_joined",
+            "dynamic": {
+                "+:.*layers\\.[0-9](?!\\d).*v_proj.*": { "bits": 8, "sym": true, "group_size": -1, "desc_act": true },
+                "+:.*lm_head.*": { "bits": 8, "sym": true, "group_size": 32, "desc_act": false }
+            }
         },
-        "cs": { "type": "CaptureSplitInfo", "num_splits": 4, "unique_embeds_lm_head_splits": true },
         "mb": {
             "type": "ModelBuilder",
             "precision": "int4",
             "int4_block_size": 32,
             "int4_accuracy_level": 4,
-            "int4_op_types_to_quantize": [ "MatMul", "Gather" ]
+            "int4_op_types_to_quantize": [ "Gather" ]
         },
         "mq": {
             "type": "MatMulNBitsToQDQ",
             "use_int4": true,
             "add_zero_point": true,
-            "nodes_to_exclude": [ "/lm_head/MatMul_Q4" ],
+            "nodes_to_exclude": [ "/lm_head/MatMulNBits" ],
             "save_as_external_data": true
         },
         "gs": {
@@ -62,8 +66,15 @@
             "surgeries": [
                 { "surgeon": "RemoveRopeMultiCache" },
                 { "surgeon": "AttentionMaskToSequenceLengths" },
+                { "surgeon": "RemoveGidxFromMatMulNBits" },
                 { "surgeon": "SimplifiedLayerNormToL2Norm" }
             ],
+            "save_as_external_data": true
+        },
+        "f16": {
+            "type": "OnnxFloatToFloat16",
+            "op_include_list": [ "GroupQueryAttention" ],
+            "keep_io_types": [ "logits" ],
             "save_as_external_data": true
         },
         "sq": {
@@ -83,15 +94,15 @@
             "provider_options": {
                 "htp_performance_mode": "burst",
                 "htp_graph_finalization_optimization_mode": "3",
-                "soc_model": "60"
+                "soc_model": "87"
             },
-            "weight_sharing": true
+            "weight_sharing": false
         },
         "cp": { "type": "ComposeOnnxModels" }
     },
     "target": "qnn_system",
     "log_severity_level": 1,
-    "output_dir": "models/llama_3.1_8b_Instruct",
+    "output_dir": "models/phi3_5-qnn",
     "cache_dir": "cache",
     "no_artifacts": true
 }

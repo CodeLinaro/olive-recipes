@@ -21,6 +21,7 @@ class IconEnum(Enum):
     qwen = "qwen"
     mistralai = "mistralai"
     HuggingFace = "HuggingFace"
+    onnx = "onnx"
 
 
 class ArchitectureEnum(Enum):
@@ -32,7 +33,6 @@ class ArchitectureEnum(Enum):
 
 class ModelStatusEnum(Enum):
     Ready = "Ready"
-    Coming = "Coming"
     Hide = "Hide"
 
 
@@ -107,6 +107,7 @@ class OliveDeviceTypes(Enum):
 # Pass name is case insensitive, so we use lower case for all pass names
 # Should sort by value
 class OlivePassNames:
+    AitkPython = "aitkpython"
     ModelBuilder = "modelbuilder"
     NVModelOptQuantization = "nvmodeloptquantization"
     OnnxFloatToFloat16 = "onnxfloattofloat16"
@@ -132,6 +133,7 @@ class OlivePropertyNames:
     DataConfigs = "data_configs"
     DataName = "data_name"
     Dataset = "dataset"
+    DataType = "data_type"
     Device = "device"
     Engine = "engine"
     EvaluateInputModel = "evaluate_input_model"
@@ -160,6 +162,7 @@ class OlivePropertyNames:
     TargetDevice = "target_device"
     Type = "type"
     UserConfig = "user_config"
+    UserScript = "user_script"
     WeightFormat = "weight_format"
 
 

@@ -29,9 +29,30 @@ def create_model_parameter(aitk, name: str, configFile: Path):
         executeRuntimeFeatures=requirements_patches,
         evalRuntime=evalRuntime,
         optimizationPaths=[],
+        isGPURequired=aitk.get("isGPURequired", None),
+        isGPUSuggested=aitk.get("isGPUSuggested", None),
     )
     parameter._file = str(configFile) + ".config"
     return parameter
+
+
+def add_optimization_wa(optimizationPaths: list[OptimizationPath], k: str, v: dict) -> bool:
+    if OlivePropertyNames.Precision in v:
+        optimizationPaths.append(
+            OptimizationPath(
+                name="WeightType",
+                path=f"{OlivePropertyNames.Passes}.{k}.{OlivePropertyNames.Precision}",
+            )
+        )
+        # We require both weight and activation type for quantization
+        optimizationPaths.append(
+            OptimizationPath(
+                name="ActivationType",
+                path=f"{OlivePropertyNames.Passes}.{k}.{OlivePropertyNames.ActivationType}",
+            )
+        )
+        return True
+    return False
 
 
 def set_optimization_path(parameter: ModelParameter, configFile: str):
@@ -64,18 +85,7 @@ def set_optimization_path(parameter: ModelParameter, configFile: str):
             OlivePassNames.OnnxStaticQuantization,
             OlivePassNames.OnnxDynamicQuantization,
         ]:
-            parameter.optimizationPaths.append(
-                OptimizationPath(
-                    name="WeightType",
-                    path=f"{OlivePropertyNames.Passes}.{k}.{OlivePropertyNames.Precision}",
-                )
-            )
-            parameter.optimizationPaths.append(
-                OptimizationPath(
-                    name="ActivationType",
-                    path=f"{OlivePropertyNames.Passes}.{k}.{OlivePropertyNames.ActivationType}",
-                )
-            )
+            add_optimization_wa(parameter.optimizationPaths, k, v)
             return
         elif vType == OlivePassNames.OnnxFloatToFloat16:
             parameter.optimizationPaths.append(
@@ -84,4 +94,30 @@ def set_optimization_path(parameter: ModelParameter, configFile: str):
                     path=f"{OlivePropertyNames.Passes}.{k}",
                 )
             )
+            return
+        elif vType == OlivePassNames.AitkPython:
+            # Check AitkPython specific properties
+            if k != OlivePassNames.AitkPython:
+                raise Exception(f"AitkPython pass key must be '{OlivePassNames.AitkPython}' in {configFile}")
+            if OlivePropertyNames.UserScript in v:
+                parameter.aitkPython = v[OlivePropertyNames.UserScript]
+                python_script = Path(configFile).parent / str(parameter.aitkPython)
+                if not python_script.exists():
+                    raise Exception(
+                        f"UserScript file {python_script} does not exist for AitkPython pass in {configFile}"
+                    )
+            else:
+                raise Exception(f"UserScript is required for AitkPython pass in {configFile}")
+            wa_added = add_optimization_wa(parameter.optimizationPaths, k, v)
+            if wa_added:
+                return
+            else:
+                # TODO handle other optimization types if needed
+                return
+
+    # If no known optimization pass found, try to at least set the optimization path for OnnxConversion if present
+    for k, v in content[OlivePropertyNames.Passes].items():
+        if v[OlivePropertyNames.Type].lower() == OlivePassNames.OnnxConversion:
+            path = f"{OlivePropertyNames.Passes}.{k}"
+            parameter.optimizationPaths.append(OptimizationPath(path=path, name="fp32"))
             return
