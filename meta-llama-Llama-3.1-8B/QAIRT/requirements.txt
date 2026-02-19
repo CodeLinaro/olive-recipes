@@ -1,1 +1,40 @@
-datasets
+# Requirements for Llama 3.1 Quantization Script
+# 
+# Installation Instructions:
+# ========================
+# 
+# Option 1 (Recommended - Install PyTorch separately first):
+# -----------------------------------------------------------
+# pip install torch==2.1.2+cu121 torchvision==0.16.2+cu121 torchaudio==2.1.2+cu121 --index-url https://download.pytorch.org/whl/cu121
+# pip install -r requirements.txt
+#
+# Option 2 (Install all at once with extra index):
+# -------------------------------------------------
+# pip install -r requirements.txt --extra-index-url https://download.pytorch.org/whl/cu121
+#
+# Note: PyTorch packages require CUDA 12.1 support from the PyTorch repository
+
+# Core ML Framework
+aimet-torch==2.14.0
+
+# PyTorch with CUDA 12.1 support
+# These require --index-url https://download.pytorch.org/whl/cu121
+torch==2.1.2+cu121
+torchvision==0.16.2+cu121
+torchaudio==2.1.2+cu121
+
+# Transformers and NLP
+transformers==4.47.0
+jinja2==3.1.0
+datasets==4.0.0
+
+# Utilities
+aenum
+
+# ONNX Tools
+onnxsim
+onnx
+onnxruntime-gpu
+
+# Data Validation
+pydantic

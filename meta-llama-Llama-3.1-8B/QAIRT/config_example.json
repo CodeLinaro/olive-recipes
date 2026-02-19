@@ -1,0 +1,6 @@
+{
+  "QNN_SDK_ROOT": "/prj/qct/aisw_scratch/lv/local_dev/shared/sdks/qairt/2.43.0.260123/",
+  "MODEL_ID": "/prj/qct/aisw_scratch/lv/local_dev/oferr/llama-3.1-8B-model/",
+  "MODEL_NAME": "llama3_1",
+  "HTP_CONFIG_FILE": "/home/jovyan/new_nb_venv/lib/python3.10/site-packages/aimet_common/quantsim_config/htp_quantsim_config_v73.json"
+}

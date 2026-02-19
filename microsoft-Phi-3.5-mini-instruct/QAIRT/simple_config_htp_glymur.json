@@ -18,7 +18,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/phi3_5-qnn-htp-glymur-lade-export",
+    "output_dir": "models/phi3_5-qnn-htp-glymur",
     "cache_dir": "cache",
     "no_artifacts": true
 }
