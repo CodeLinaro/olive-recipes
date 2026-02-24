@@ -12,7 +12,7 @@
             "log_level": "debug",
             "extra_args": {
                 "multi_graph": true,
-                "prepare_embedding_lut": false
+                "_prepare_embedding_lut": false
             }
         },
         "qe": {

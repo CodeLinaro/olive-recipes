@@ -12,7 +12,10 @@
             "log_level": "debug",
             "extra_args": {
                 "multi_graph": true,
-                "_prepare_embedding_lut": false
+                "_prepare_embedding_lut": false,
+                "_transformation_config.model_transformer_config.split_model.split_embedding": true,
+                "_transformation_config.model_transformer_config.split_model.split_lm_head": true,
+                "_transformation_config.model_transformer_config.split_model.num_splits": 4
             }
         },
         "qe": {
