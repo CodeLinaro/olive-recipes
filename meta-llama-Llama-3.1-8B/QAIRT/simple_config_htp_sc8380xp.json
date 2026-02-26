@@ -9,7 +9,8 @@
             "script_path": "llama3_1_script.py",
             "script_config": {
                 "MODEL_ID": "meta-llama/Llama-3.1-8B",
-                "QNN_SDK_ROOT": "/local/mnt2/workspace2/kromero/sdks/2.44.0.260210/"
+                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/",
+		"NUM_HIDDEN_LAYERS": 2
             }
         },
         "qgab": {
@@ -19,7 +20,7 @@
             "cache_dir": "./cache/qairt",
             "log_level": "debug",
             "extra_args": {
-                "multi_graph": true,
+                "multi_graph": false,
                 "_prepare_embedding_lut": false
             }
         },
