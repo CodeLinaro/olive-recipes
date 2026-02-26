@@ -16,7 +16,6 @@
             "type": "QairtGenAIBuilder",
             "backend": "HTP",
             "soc_details": "chipset:SC8480XP",
-            "cache_dir": "./cache/qairt",
             "log_level": "debug",
             "extra_args": {
                 "multi_graph": true,
