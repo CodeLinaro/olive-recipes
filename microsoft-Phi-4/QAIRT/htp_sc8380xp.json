@@ -6,16 +6,10 @@
     "passes": {
         "qgab": {
             "type": "QairtGenAIBuilder",
+            "log_level": "debug",
             "backend": "HTP",
             "soc_details": "chipset:SC8380XP",
-            "log_level": "debug",
-            "extra_args": {
-                "multi_graph": true,
-                "_prepare_embedding_lut": false,
-                "_transformation_config.model_transformer_config.split_model.split_embedding": true,
-                "_transformation_config.model_transformer_config.split_model.split_lm_head": true,
-                "_transformation_config.model_transformer_config.split_model.num_splits": 4
-            }
+            "multi_graph": true
         },
         "qe": {
             "type": "QairtEncapsulation",
@@ -24,7 +18,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/phi4-qnn-htp-sc8380xp",
+    "output_dir": "models/phi4-qairt-htp-sc8380xp",
     "cache_dir": "cache",
     "no_artifacts": true
 }

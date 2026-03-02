@@ -1,18 +1,15 @@
 {
     "input_model": { 
         "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace2/kromero/models/qwen-2.5-7b-nb1-20260226"
+        "model_path": "/local/mnt2/workspace2/kromero/models/phi35-nb1-20251030"
     },
     "passes": {
         "qgab": {
             "type": "QairtGenAIBuilder",
-            "backend": "HTP",
-            "soc_details": "chipset:SC8380XP",
             "log_level": "debug",
-            "extra_args": {
-                "multi_graph": false,
-                "_prepare_embedding_lut": false
-            }
+            "backend": "HTP",
+            "soc_details": "chipset:SC8480XP",
+            "multi_graph": true
         },
         "qe": {
             "type": "QairtEncapsulation",
@@ -21,7 +18,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/qwen2_5_7b-qnn-htp-sc8380xp",
+    "output_dir": "models/phi3_5-qairt-htp-sc8480xp",
     "cache_dir": "cache",
     "no_artifacts": true
 }
