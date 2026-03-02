@@ -9,7 +9,7 @@
             "log_level": "debug",
             "backend": "HTP",
             "soc_details": "chipset:SC8380XP",
-            "multi_graph": true
+            "multi_graph": false
         },
         "qe": {
             "type": "QairtEncapsulation",
