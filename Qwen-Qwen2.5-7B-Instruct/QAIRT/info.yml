@@ -1,0 +1,14 @@
+keywords:
+    foundry-local
+    qairt
+arch: qwen2
+recipes:
+    - file: "config.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
+    - file: "config_fp16.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
+name: qwen2.5-7b-instruct

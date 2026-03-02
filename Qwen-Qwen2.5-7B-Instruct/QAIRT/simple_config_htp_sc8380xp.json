@@ -1,18 +1,9 @@
 {
     "input_model": { 
-        "type": "HFModel", 
-        "model_path": "meta-llama/Llama-3.1-8B"
+        "type": "QairtPreparedModel", 
+        "model_path": "/local/mnt2/workspace2/kromero/models/qwen-2.5-7b-nb1-20260226"
     },
     "passes": {
-        "qp": {
-            "type": "QairtPreparation",
-            "script_path": "llama3_1_script.py",
-            "script_config": {
-                "MODEL_ID": "meta-llama/Llama-3.1-8B",
-                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/",
-		        "NUM_HIDDEN_LAYERS": 2
-            }
-        },
         "qgab": {
             "type": "QairtGenAIBuilder",
             "backend": "HTP",
@@ -30,7 +21,7 @@
         }
     },
     "log_severity_level": 1,
-    "output_dir": "models/llama3_1-htp-sc8380xp",
+    "output_dir": "models/qwen2_5_7b-qnn-htp-sc8380xp",
     "cache_dir": "cache",
     "no_artifacts": true
 }
