@@ -1,6 +1,5 @@
 absl-py==2.1.0
 aenum==3.1.15
-aimet-torch==2.23.0
 aiohappyeyeballs==2.6.1
 aiohttp==3.13.3
 aiosignal==1.4.0
@@ -51,7 +50,6 @@ defusedxml==0.7.1
 dill==0.4.0
 exceptiongroup==1.3.1
 executing==2.2.1
-fast-hadamard-transform==1.0.4.post1
 fastapi==0.128.0
 fastjsonschema==2.21.2
 filelock==3.20.3
@@ -229,9 +227,9 @@ tinycss2==1.4.0
 tokenizers==0.21.4
 tomli==2.4.0
 torch==1.13.1
-torchvision==0.16.0
+torchvision==0.14.1
 tornado==6.5.4
-tqdm==4.66.2
+tqdm==4.66.3
 traitlets==5.14.3
 transformers==4.50.0
 triton==2.1.0

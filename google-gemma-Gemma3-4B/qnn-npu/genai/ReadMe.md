@@ -33,14 +33,6 @@ gemma_env\Scripts\activate
 
 ## 3. Install Required Packages
 
-### Install Provided Wheel File
-
-⚠️ Build wheel file using [onnxruntime-genai](https://github.com/CodeLinaro/onnxruntime-genai/commit/1b73c328bdc2ded86304312721d7051c1f9b95f0) commit
-
-```bash
-pip install --force-reinstall onnxruntime_genai-0.10.0.dev0-cp312-cp312-win_arm64.whl
-```
-
 ### Install Supporting Dependencies
 
 ```bash
@@ -103,7 +95,7 @@ The build process will generate the following files:
 
 ***
 
-# Inference Environment Setup
+# Inference Environment Setup (Arm Python Required)
 
 ## 7. Create Inference Environment
 
@@ -114,11 +106,12 @@ gemma_test_env\Scripts\activate
 
 ### Install Required Wheel File
 
-
 ⚠️ Build wheel file using [onnxruntime-genai](https://github.com/CodeLinaro/onnxruntime-genai/commit/1b73c328bdc2ded86304312721d7051c1f9b95f0) commit
 
 ```bash
 pip install --force-reinstall onnxruntime_genai-0.10.0.dev0-cp312-cp312-win_arm64.whl
 ```
+
+> Provided wheel file is for Python 3.12 Arm
 
 ***

@@ -11,12 +11,12 @@ This notebook is intended to run on a machine with:
 ## 1. Create and Activate Python Virtual Environment
 
 ```bash
-cd example1
 python3.10 -m venv venv_gemma
 source venv_gemma/bin/activate
 pip install uv
 uv pip install --pre --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/ORT-Nightly/pypi/simple onnxruntime-qnn
 uv pip install -r example1_env_req.txt
+uv pip install fast-hadamard-transform==1.0.4.post1 --no-build-isolation
 ```
 
 ***
