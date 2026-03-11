@@ -1,7 +1,7 @@
 {
     "input_model": { 
         "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace2/kromero/models/qwen-2.5-7b-nb1-20260226"
+        "model_path": "/local/mnt2/workspace2/kromero/nb1-artifacts/qwen-2.5-7b-nb1-20260226"
     },
     "passes": {
         "qgab": {

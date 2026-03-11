@@ -1,7 +1,7 @@
 {
     "input_model": { 
         "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace2/kromero/models/phi35-nb1-artifactory-20260222"
+        "model_path": "/local/mnt2/workspace2/kromero/nb1-artifacts/phi35-nb1-20260225"
     },
     "passes": {
         "qgab": {
@@ -9,7 +9,7 @@
             "log_level": "debug",
             "backend": "HTP",
             "soc_details": "chipset:SC8380XP",
-            "multi_graph": false
+            "multi_graph": true
         },
         "qe": {
             "type": "QairtEncapsulation",
