@@ -520,9 +520,6 @@ if run_ppl_eval:
 
     print(f"PPL score of HuggingFace FP model = {orig_ppl}")
 
-# Remove the HuggingFace model from memory
-del model
-
 
 # In[14]:
 
@@ -715,10 +712,12 @@ if enable_adascale:
     print("AdaScale preprocessing complete. Continuing with quantization pipeline...")
 
 else:
+    # Remove the HuggingFace model from memory
+    del model
+
     print("=" * 80)
     print("AdaScale preprocessing skipped (ENABLE_ADASCALE=False)")
     print("=" * 80)
-
 
 # ---
 # ## 3. Instantiate and adapt FP32 model
