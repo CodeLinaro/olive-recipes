@@ -268,7 +268,11 @@ PLATFORM_GEN = get_config_value("PLATFORM_GEN", 5, 'int')
 nsp_target = eval(f"NspTargets.{TARGET_PLATFORM}.GEN{PLATFORM_GEN}")
 
 # Select quantsim config based on target
-htp_config_file = get_config_value("HTP_CONFIG_FILE", "/home/jovyan/new_nb_venv/lib/python3.10/site-packages/aimet_common/quantsim_config/htp_quantsim_config_v73.json", 'str')
+htp_config_file = get_config_value(
+    "HTP_CONFIG_FILE",
+    f'{sys.prefix}/lib/python3.10/site-packages/aimet_common/quantsim_config/htp_quantsim_config_{nsp_target.dsp_arch}.json',
+    'str'
+)
 
 
 # ---

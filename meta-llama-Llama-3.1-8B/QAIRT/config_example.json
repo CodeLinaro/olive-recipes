@@ -1,4 +1,0 @@
-{
-    "MODEL_ID": "meta-llama/Llama-3.1-8B",
-    "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/"
-}
