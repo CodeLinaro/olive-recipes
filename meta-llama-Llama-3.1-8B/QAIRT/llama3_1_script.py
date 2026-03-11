@@ -1435,13 +1435,11 @@ with event_marker(f"KVCache export onnx and encodings", flush_ram=True):
                             export_model=True, filename_prefix_encodings=base_filename_prefix)
 
 # Exporting Tokenizer
-tokenizer_dir = os.path.join(output_dir, 'tokenizer')
-os.makedirs(tokenizer_dir, exist_ok=True)
-tokenizer.save_pretrained(tokenizer_dir)
+tokenizer.save_pretrained(output_dir)
 
 # Export chat template
 if getattr(tokenizer, "chat_template", None):
-    with open(os.path.join(tokenizer_dir, "chat_template.jinja"), "w", encoding="utf-8") as f:
+    with open(os.path.join(output_dir, "chat_template.jinja"), "w", encoding="utf-8") as f:
         f.write(tokenizer.chat_template)
 else:
     print("No chat_template found on tokenizer; nothing to export.")
