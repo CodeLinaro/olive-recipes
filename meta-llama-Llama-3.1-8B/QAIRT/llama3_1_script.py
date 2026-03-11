@@ -69,7 +69,7 @@ Optional Variables:
   SKIP_PREPARE              Skip model preparation (default: False)
   LD_LIBRARY_PATH           Library path for QNN SDK (default: None)
   TARGET_PLATFORM           Target platform: Windows/Android (default: Windows)
-  PLATFORM_GEN              Platform generation: 2/4/5 (default: 2)
+  PLATFORM_GEN              Platform generation: 2/4/5 (default: 3)
   HTP_CONFIG_FILE           Path to HTP quantsim config file (default: auto-detected)
   MODEL_NAME                Model name identifier (default: llama3_1)
   CACHE_DIR                 Cache directory path (default: ./cache_dir)
@@ -78,6 +78,17 @@ Optional Variables:
   BASE_CALIBRATION_DATASET  Calibration dataset name (default: WIKITEXT)
   ARN                       Auto-regression length (default: 2073)
   WIKI_DATASET_PATH         Path to wiki dataset (default: None)
+
+AdaScale Options:
+  ENABLE_ADASCALE           Enable AdaScale preprocessing (default: False)
+  ADASCALE_ITERATIONS       Number of AdaScale iterations (default: 5000)
+  ENABLE_BF16               Enable BF16 for AdaScale (default: False)
+  NUM_EVAL_BATCHES          Number of evaluation batches (default: 0)
+  C4_DATASET_PATH           Path to C4 dataset (default: c4-train.00000-of-01024.json)
+  ADASCALE_DIR              AdaScale output directory (default: ./adascale_dir)
+  ADASCALE_BATCH_SIZE       Batch size for AdaScale (default: 2)
+  ADASCALE_PERCENT_DATASET  Percent of dataset to use (default: 1)
+  ADASCALE_NUM_SAMPLES      Number of samples for AdaScale (default: 500)
 
 Priority Order: JSON config > Environment variables > Default values
 
@@ -177,11 +188,18 @@ import os
 
 context_length = get_config_value("CONTEXT_LENGTH", 4173, 'int')
 
-enable_long_context = get_config_value("ENABLE_LONG_CONTEXT", False, 'bool') # long context length model
-
 enable_right_padding = get_config_value("ENABLE_RIGHT_PADDING", True, 'bool')  # right padding of kvcache
 
-anchor_alpha = None
+# AdaScale Configuration
+enable_adascale = get_config_value("ENABLE_ADASCALE", False, 'bool')
+adascale_iterations = get_config_value("ADASCALE_ITERATIONS", 5000, 'int')
+enable_bf16 = get_config_value("ENABLE_BF16", False, 'bool')
+num_eval_batches = get_config_value("NUM_EVAL_BATCHES", 0, 'int')
+c4_dataset_path = get_config_value("C4_DATASET_PATH", "c4-train.00000-of-01024.json")
+adascale_dir = get_config_value("ADASCALE_DIR", "./adascale_dir")
+adascale_batch_size = get_config_value("ADASCALE_BATCH_SIZE", 2, 'int')
+adascale_percent_dataset = get_config_value("ADASCALE_PERCENT_DATASET", 1, 'int')
+adascale_num_samples = get_config_value("ADASCALE_NUM_SAMPLES", 500, 'int')
 
 
 # #### 1.1.2 Notebook Quantization Configs
@@ -265,7 +283,7 @@ from utilities.nsptargets import NspTargets
 TARGET_PLATFORM = get_config_value("TARGET_PLATFORM", "Windows").capitalize()
 
 # Android GEN4 and GEN5 is supported for this notebook
-PLATFORM_GEN = get_config_value("PLATFORM_GEN", 2, 'int')
+PLATFORM_GEN = get_config_value("PLATFORM_GEN", 3, 'int')
 
 nsp_target = eval(f"NspTargets.{TARGET_PLATFORM}.GEN{PLATFORM_GEN}")
 
@@ -513,8 +531,6 @@ ARN = get_config_value("ARN", 2073, 'int')
 
 enable_right_padding =  enable_right_padding
 
-enable_eviction = False
-
 pad_to_left = not enable_right_padding
 
 setattr(llm_config, 'return_new_key_value_only', True)
@@ -619,11 +635,6 @@ def adapted_model_prepare_inputs_for_dynamic_shapes(self,input_ids_slice, attn_m
         'past_key_values': outputs['past_key_values'],
     }
 
-    if enable_long_context:
-        alpha = 1.0 if kv_length==0 else anchor_alpha
-        valid_token_mask = attn_mask_slice.unsqueeze(dim=0).unsqueeze(dim=0) * (alpha / input_ids_slice.shape[1])
-        prepared_inputs.update({'valid_token_mask': valid_token_mask,
-                               'anchor_buffer' : change_tensor_device_placement(self.anchor_buffer, device),})
     return prepared_inputs
 
 
@@ -712,13 +723,7 @@ def adapted_model_prepare_inputs_for_static_shapes(self,input_ids_slice, attn_ma
         'past_key_values':padded_past_kv_in
     }
 
-    if enable_long_context:
-        alpha = 1.0 if kv_length==0 else anchor_alpha
-        valid_token_mask = inp_attn_mask.unsqueeze(dim=0).unsqueeze(dim=0) * (alpha / input_ids_slice.shape[1])
-        prepared_inputs.update({'valid_token_mask': valid_token_mask,
-                               'anchor_buffer' : change_tensor_device_placement(self.anchor_buffer, device),
-                               'cache_index': cache_index,})
-    elif enable_right_padding:
+    if enable_right_padding:
         prepared_inputs.update({'cache_index': cache_index})
 
     return prepared_inputs
@@ -744,10 +749,6 @@ def adapted_model_forward(
     if kv_length == 0:
         self.initial_prompt_length = input_ids.shape[1] if input_ids is not None else inputs_embeds.shape[1]
         self.tokens_seen_so_far = 0
-        if enable_long_context:
-            shape = (input_ids.shape[0], llm_config.num_key_value_heads, 1, llm_config.hidden_size // llm_config.num_attention_heads)
-            self.anchor_buffer = tuple(torch.zeros(shape).to(device=input_ids.device) for _ in range(llm_config.num_hidden_layers))
-            self.overwriting_index_cache = {}
 
     position_ids = None
     device = input_ids.device
@@ -784,56 +785,12 @@ def adapted_model_forward(
         if not static_shape:
             cur_outputs = (self.lm_head(cur_outputs[0]),) + cur_outputs[1:]
 
-        # the following condition checks whether the size of the KV after accumulation would exceed the budget.
-        # 1. Compute scores from accumulated_past_kv & the output anchor,
-        # 2. Update the overwriting_index_cache,
-        # 3. Concat accumulated kvcache and new kvcache
-        # 4. Scatter the new KV into positions of old KV
-        # If running SSD, make sure to adjust this computation to account for the prefix kv in the budget.
-        # avoided creating a new tuple of current_key_value to avoid the memory spike, sending slice
-        num_exceed_kv = kv_length + input_ids_slice.shape[-1] - (context_length -ARN)
-        overwrite_cache = False
-        if hasattr(self, "overwriting_index_cache") and self.overwriting_index_cache is not None:
-            # Update the overwriting_index_cache if necessary
-            if self.overwriting_index_cache.get(0,None) is None:
-                overwrite_cache = True
-            elif self.overwriting_index_cache.get(0,None).shape[-2] < num_exceed_kv:
-                overwrite_cache = True
-        if enable_eviction and num_exceed_kv > 0 and overwrite_cache:
-            # if tokens_seen_so_far are less than the initial prompt length then we are in the prefill stage.
-            if getattr(self, "tokens_seen_so_far", 0) <= getattr(self, "initial_prompt_length", 0):
-                new_KV_per_inference = tokens_to_evict_prefill
-                # new # of kv in the prefill stage
-            else:
-                new_KV_per_inference = tokens_to_evict_decode
-                # new # of kv in the decode stage
-
-            scores = llm_compute_scores(scorer, outputs['past_key_values'], self.anchor_buffer)
-            # setting num of candidate kv to evict during lazy eviction decode/prefill stage
-            # if new kv per inference is greater than this set num_kv_candidate_to_evict, then we keep larger one
-            num_kv_candidate_to_evict = 1024
-            num_kv_candidate_to_evict = max(new_KV_per_inference,num_kv_candidate_to_evict)
-            # This value should also not exceed kv_length accumulated so far
-            num_kv_candidate_to_evict = min(kv_length, num_kv_candidate_to_evict)
-            # Eviction frequency can be calculated by num_kv_candidate_to_evict//new_KV_per_inference
-            # sending num of candidate kv to evict to llm_update_overwriting_cache api
-            self.overwriting_index_len = num_kv_candidate_to_evict
-            llm_update_overwriting_cache(self, scores, num_exceed_kv)
-
-
         outputs['past_key_values'] = llm_update_kv_cache(unpadded_past_kv = outputs['past_key_values'],
-                                                         current_key_values= cur_outputs[1][0] if enable_long_context else cur_outputs[1],
+                                                         current_key_values= cur_outputs[1],
                                                          key_concat_axis=KEY_CONCAT_AXIS,
                                                          value_concat_axis=VALUE_CONCAT_AXIS,
                                                          input_ids_slice = input_ids_slice,
                                                          pad_to_left=pad_to_left)
-        if enable_eviction and num_exceed_kv > 0:
-            # At this point, the outputs['past_key_values'] may exceed budget, we need to make sure it is within budget by scattering the new KV into positions of old KV (at indices which need to be evicted in order)
-            outputs['past_key_values'] = llm_scatter_exceeded_kv_using_lazy_eviction(self, outputs['past_key_values'],
-                                                                                     num_exceed_kv, KEY_CONCAT_AXIS,
-                                                                                     VALUE_CONCAT_AXIS)
-        if enable_long_context:
-            self.anchor_buffer = cur_outputs[1][1]
 
         lm_logits = llm_trim_pad_logits(cur_logits = cur_outputs[0],
                                         input_ids_slice=input_ids_slice,
