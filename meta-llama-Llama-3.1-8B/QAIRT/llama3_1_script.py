@@ -351,6 +351,78 @@ print("=" * 80)
 
 from transformers import AutoConfig, AutoTokenizer
 
+# Helper function to download C4 dataset if needed for AdaScale
+def download_c4_dataset_if_needed(cache_dir):
+    """
+    Download C4 dataset if not already present in cache_dir/c4-dataset/
+    
+    Args:
+        cache_dir: Base cache directory path
+        
+    Returns:
+        Path to the C4 dataset JSON file
+    """
+    import urllib.request
+    import gzip
+    import shutil
+    
+    c4_dir = os.path.join(cache_dir, "c4-dataset")
+    c4_filename = "c4-train.00000-of-01024.json"
+    c4_file = os.path.join(c4_dir, c4_filename)
+    c4_gz_file = c4_file + ".gz"
+    
+    # Check if file already exists
+    if os.path.exists(c4_file):
+        print(f"C4 dataset found at: {c4_file}")
+        return c4_file
+    
+    print("=" * 80)
+    print("Downloading C4 dataset for AdaScale")
+    print("=" * 80)
+    
+    # Create directory if it doesn't exist
+    os.makedirs(c4_dir, exist_ok=True)
+    
+    # Download URL
+    c4_url = "https://huggingface.co/datasets/allenai/c4/resolve/main/en/c4-train.00000-of-01024.json.gz"
+    
+    try:
+        # Download the compressed file
+        print(f"Downloading from: {c4_url}")
+        print(f"Saving to: {c4_gz_file}")
+        print("This may take several minutes depending on your connection...")
+        
+        def download_progress(block_num, block_size, total_size):
+            downloaded = block_num * block_size
+            if total_size > 0:
+                percent = min(100, downloaded * 100 / total_size)
+                mb_downloaded = downloaded / (1024 * 1024)
+                mb_total = total_size / (1024 * 1024)
+                print(f"\rProgress: {percent:.1f}% ({mb_downloaded:.1f}/{mb_total:.1f} MB)", end='')
+        
+        urllib.request.urlretrieve(c4_url, c4_gz_file, reporthook=download_progress)
+        print("\nDownload complete!")
+        
+        # Decompress the file
+        print(f"Decompressing {c4_filename}.gz...")
+        with gzip.open(c4_gz_file, 'rb') as f_in:
+            with open(c4_file, 'wb') as f_out:
+                shutil.copyfileobj(f_in, f_out)
+        
+        # Remove the compressed file
+        os.remove(c4_gz_file)
+        print(f"Decompression complete! File saved at: {c4_file}")
+        
+        return c4_file
+        
+    except Exception as e:
+        print(f"\nError downloading C4 dataset: {e}")
+        print("Please download manually using:")
+        print(f"  wget {c4_url}")
+        print(f"  gunzip {c4_filename}.gz")
+        print(f"  mv {c4_filename} {c4_dir}/")
+        raise
+
 llm_config = AutoConfig.from_pretrained(model_id, cache_dir=cache_dir, trust_remote_code=True)
 
 # To help with debugging num_hidden_layers could be set to 2 to quickly verify the pipeline and export a two layer model for verification purposes
@@ -404,6 +476,31 @@ assert base_calibration_key in valid_datasets, (
 base_calibration_dataloader = valid_datasets[base_calibration_key]["dataloader"]
 print("Using base calibration dataset:", base_calibration_key)
 
+# AdaScale-specific dataloader
+if enable_adascale:
+    from llm_utils.generic_dataloader import get_local_dataset
+    
+    # Auto-download C4 dataset if not provided and not found
+    if c4_dataset_path == "c4-train.00000-of-01024.json":
+        # Default path was used, check in cache_dir/c4-dataset/
+        c4_dataset_path = download_c4_dataset_if_needed(cache_dir)
+    elif not os.path.exists(c4_dataset_path):
+        # Custom path was provided but file doesn't exist
+        print(f"Warning: C4 dataset not found at specified path: {c4_dataset_path}")
+        print("Attempting to download to default location...")
+        c4_dataset_path = download_c4_dataset_if_needed(cache_dir)
+    
+    with event_marker("Instantiate adascale dataloaders"):
+        adascale_train_dataloader, _ = get_local_dataset(
+            context_length, 
+            tokenizer, 
+            json_path=c4_dataset_path,
+            key="input_ids", 
+            batch_size=adascale_batch_size,
+            percent_dataset_to_load=adascale_percent_dataset,
+            num_samples=adascale_num_samples
+        )
+
 
 # ---
 # ### 2.3 HuggingFace FP model eval
@@ -438,6 +535,189 @@ llm_lib_log_property({Property.context_length : context_length})
 
 if run_ppl_eval:
     llm_lib_log_metric(ModelType.hf_model, Metric.ppl, orig_ppl, model_name="base")
+
+
+# ---
+# ## 2.4 AdaScale Preprocessing (Optional)
+# 
+# If AdaScale is enabled, this section will optimize the model weights for better quantization performance.
+# The AdaScale-optimized model will be saved to adascale_dir and used for the rest of the pipeline.
+
+# In[14a]:
+
+if enable_adascale:
+    print("=" * 80)
+    print("2.4 AdaScale Preprocessing")
+    print("=" * 80)
+    
+    # Import required modules for AdaScale
+    from transformers import PreTrainedModel, DynamicCache
+    from aimet_common.defs import QuantScheme
+    from aimet_torch.v2.quantsim import QuantizationSimModel
+    from aimet_torch.v2.experimental import propagate_output_encodings
+    from aimet_torch.nn.modules import custom as aimet_ops
+    from aimet_torch.v2.nn.true_quant import QuantizedLinear
+    from aimet_torch.v2.quantization.affine import QuantizeDequantize
+    from aimet_torch.experimental.adascale import apply_adascale
+    from aimet_torch.v2.utils import remove_activation_quantizers
+    import types
+    import re
+    
+    # 2.4.1 Redefine forward for JIT tracing in Quantsim Creation
+    print("=" * 80)
+    print("2.4.1 Redefine forward for JIT tracing")
+    print("=" * 80)
+    
+    # AIMET requires KV Cache to be of type Tuple during the forward pass
+    def custom_forward(self, input_ids=None, attention_mask=None, position_ids=None, past_key_values=None, *args, **kwargs):
+        past_key_values = DynamicCache.from_legacy_cache(past_key_values)
+        
+        lm_logits, new_past_key_values = self.__original_forward__(
+            input_ids=input_ids,
+            attention_mask=attention_mask,
+            position_ids=position_ids,
+            past_key_values=past_key_values,
+            num_logits_to_return=0,
+            return_dict=False,
+            *args,
+            **kwargs,
+        )
+        
+        return lm_logits, new_past_key_values.to_legacy_cache()
+    
+    # Save original forward method
+    model.__original_forward__ = model.forward
+    # Replace with custom forward
+    model.forward = types.MethodType(custom_forward, model)
+    
+    # 2.4.2 Create quantsim configured for QNN HTP target
+    print("=" * 80)
+    print("2.4.2 Create quantsim for AdaScale")
+    print("=" * 80)
+    
+    dummy_input = torch.randint(0, 1, (1, 1, context_length), device="cuda")
+    
+    with event_marker("create KVCache Quantsim for AdaScale"):
+        with place_model(model, "cuda"):
+            model.config.return_dict = False
+            adascale_quantsim = QuantizationSimModel(
+                model=model,
+                quant_scheme=QuantScheme.post_training_tf,
+                default_output_bw=16,
+                default_param_bw=4,
+                in_place=True,
+                dummy_input=tuple(list(dummy_input)),
+                config_file=htp_config_file
+            )
+    
+    # Propagate output encodings for Concat ops
+    propagate_output_encodings(adascale_quantsim, aimet_ops.Concat)
+    
+    # 2.4.3 Enable per channel quantization
+    print("=" * 80)
+    print("2.4.3 Enable per channel quantization")
+    print("=" * 80)
+    
+    for name, qmodule in adascale_quantsim.named_qmodules():
+        if isinstance(qmodule, QuantizedLinear):
+            assert len(qmodule.weight.shape) == 2, \
+                f"Per channel quantization for linear weights is only supported for 2d weights, got shape: {qmodule.weight.shape}"
+            qmodule.param_quantizers["weight"] = QuantizeDequantize(
+                shape=(qmodule.weight.shape[0], 1),
+                bitwidth=qmodule.param_quantizers["weight"].bitwidth,
+                symmetric=qmodule.param_quantizers["weight"].symmetric
+            ).to(next(adascale_quantsim.model.parameters()).device)
+    
+    # 2.4.4 Manual mixed precision + Disable un-needed quantizers
+    print("=" * 80)
+    print("2.4.4 Manual mixed precision for AdaScale")
+    print("=" * 80)
+    
+    # Remove quantizers for non decoder blocks (AdaScale only operates on decoder blocks)
+    adascale_quantsim.model.model.embed_tokens.param_quantizers["weight"] = None
+    adascale_quantsim.model.lm_head.param_quantizers["weight"] = None
+    
+    # Increase bitwidth for rmsnorm due to higher quantization sensitivity
+    for name, qmodule in adascale_quantsim.named_qmodules():
+        if re.search(r'rmsnorm', qmodule.__class__.__name__.lower()):
+            qmodule.param_quantizers['weight'] = QuantizeDequantize(
+                shape=(), 
+                bitwidth=16, 
+                symmetric=False
+            ).to(next(adascale_quantsim.model.parameters()).device)
+    
+    # 2.4.5 Apply AdaScale
+    print("=" * 80)
+    print("2.4.5 Apply AdaScale optimization")
+    print("=" * 80)
+    
+    with event_marker("apply AdaScale", flush_ram=True):
+        with place_model(adascale_quantsim.model, "cuda"):
+            apply_adascale(
+                qsim=adascale_quantsim,
+                data_loader=adascale_train_dataloader,
+                forward_fn=custom_forward,
+                num_iterations=adascale_iterations
+            )
+    
+    # 2.4.6 Evaluate AdaScale model
+    if run_ppl_eval:
+        print("=" * 80)
+        print("2.4.6 Evaluate AdaScale model")
+        print("=" * 80)
+        
+        with event_marker("AdaScale FP model eval"):
+            with place_model(adascale_quantsim.model, torch.device('cuda')), \
+                 remove_activation_quantizers(adascale_quantsim.model):
+                adascaled_ppl = llm_evaluate_ppl_with_dataloader(
+                    model=adascale_quantsim.model, 
+                    dataloader=wiki_test_dataloader, 
+                    num_batches=num_eval_batches
+                )
+        
+        print(f"PPL score of AdaScale model = {adascaled_ppl}")
+        llm_lib_log_metric(ModelType.hf_model, Metric.ppl, adascaled_ppl, model_name="adascale")
+    
+    # 2.4.7 Export AdaScale model
+    print("=" * 80)
+    print("2.4.7 Export AdaScale model")
+    print("=" * 80)
+    
+    with event_marker("save AdaScale model", flush_ram=True):
+        fp_ada_model = QuantizationSimModel.get_original_model(adascale_quantsim.model, qdq_weights=True)
+        fp_ada_model.save_pretrained(adascale_dir)
+        tokenizer.save_pretrained(adascale_dir)
+    
+    print(f"AdaScale model saved to: {adascale_dir}")
+    
+    # Clean up AdaScale quantsim
+    del adascale_quantsim
+    del model
+    
+    # 2.4.8 Reload model from AdaScale directory for rest of pipeline
+    print("=" * 80)
+    print("2.4.8 Reload AdaScale model for quantization pipeline")
+    print("=" * 80)
+    
+    # Update model_id to point to AdaScale directory
+    original_model_id = model_id
+    model_id = adascale_dir
+    
+    print(f"Loading AdaScale-optimized model from: {model_id}")
+    
+    # Reload config and model from AdaScale directory
+    llm_config = AutoConfig.from_pretrained(model_id, cache_dir=cache_dir, trust_remote_code=True)
+    llm_config.num_hidden_layers = num_hidden_layers if num_hidden_layers > 0 else llm_config.num_hidden_layers
+    
+    with event_marker('AdaScale model reload'):
+        model = modeling_llama.LlamaForCausalLM.from_pretrained(model_id, config=llm_config)
+    
+    print("AdaScale preprocessing complete. Continuing with quantization pipeline...")
+
+else:
+    print("=" * 80)
+    print("AdaScale preprocessing skipped (ENABLE_ADASCALE=False)")
+    print("=" * 80)
 
 
 # ---
