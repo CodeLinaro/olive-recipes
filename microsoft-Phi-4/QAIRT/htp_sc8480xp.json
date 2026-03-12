@@ -1,16 +1,15 @@
 {
     "input_model": { 
         "type": "HFModel", 
-        "model_path": "microsoft/phi-4"
+        "model_path": "microsoft/Phi-4-reasoning"
     },
     "passes": {
         "qp": {
             "type": "QairtPreparation",
             "script_path": "phi4_script.py",
             "script_config": {
-                "MODEL_ID": "microsoft/phi-4",
-                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/",
-                "NUM_HIDDEN_LAYERS": 2
+                "MODEL_ID": "microsoft/Phi-4-reasoning",
+                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/"
             }
         },
         "qgab": {

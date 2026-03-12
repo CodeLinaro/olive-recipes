@@ -263,7 +263,7 @@ from genai_lib.common.debug.profiler import event_marker
 os.environ['HF_HOME']="./"
 model_name = get_config_value("MODEL_NAME", 'phi4')
 
-model_id = get_config_value("MODEL_ID", "microsoft/Phi-4")
+model_id = get_config_value("MODEL_ID", "microsoft/Phi-4-reasoning")
 
 cache_dir = get_config_value("CACHE_DIR", './cache_dir')
 
