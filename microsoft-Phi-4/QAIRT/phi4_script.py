@@ -1227,9 +1227,17 @@ with event_marker(f"KVCache export onnx and encodings", flush_ram=True):
             quantsim.export(base_onnx_dir, base_filename_prefix, dummy_input, onnx_export_args=onnx_api_args,filename_prefix_encodings=base_filename_prefix)
 
 # Exporting Tokenizer
-tokenizer_dir = os.path.join(output_dir, 'tokenizer')
-os.makedirs(tokenizer_dir, exist_ok=True)
-tokenizer.save_pretrained(tokenizer_dir)
+tokenizer.save_pretrained(output_dir)
+
+# Export chat template
+if getattr(tokenizer, "chat_template", None):
+    with open(os.path.join(output_dir, "chat_template.jinja"), "w", encoding="utf-8") as f:
+        f.write(tokenizer.chat_template)
+else:
+    print("No chat_template found on tokenizer; nothing to export.")
+
+# Export generation config
+model.generation_config.save_pretrained(output_dir)
 
 # ---
 # ### 8.2 Generating test vectors for QNN SDK
