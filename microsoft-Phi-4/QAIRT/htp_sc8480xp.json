@@ -1,9 +1,18 @@
 {
     "input_model": { 
-        "type": "QairtPreparedModel", 
-        "model_path": "/local/mnt2/workspace2/kromero/nb1-artifacts/phi4-nb1-20260225/"
+        "type": "HFModel", 
+        "model_path": "microsoft/phi-4"
     },
     "passes": {
+        "qp": {
+            "type": "QairtPreparation",
+            "script_path": "phi4_script.py",
+            "script_config": {
+                "MODEL_ID": "microsoft/phi-4",
+                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/",
+                "NUM_HIDDEN_LAYERS": 2
+            }
+        },
         "qgab": {
             "type": "QairtGenAIBuilder",
             "log_level": "debug",
