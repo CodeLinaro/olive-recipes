@@ -45,7 +45,7 @@ qpm-cli --license-activate Qualcomm_AI_Runtime_SDK
 5.  Extract the QNN SDK:
 
 ```bash
-qpm-cli --extract Qualcomm_AI_Runtime_SDK -v "2.40.1.251119" --config /tmp/qnn
+qpm-cli --extract Qualcomm_AI_Runtime_SDK -v "2.37.0.250724" --config /tmp/qnn
 ```
 
 ***

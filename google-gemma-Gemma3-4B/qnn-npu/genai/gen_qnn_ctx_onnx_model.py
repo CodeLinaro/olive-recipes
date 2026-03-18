@@ -244,7 +244,7 @@ def generate_wrapper_onnx_file(
 
     graph_def = helper.make_graph(graph_nodes, "qnn-onnx-model", model_inputs, model_outputs, ini_list, "", value_infos)
 
-    model_def = helper.make_model(graph_def, producer_name="MS", ir_version = 11, opset_imports=[helper.make_opsetid("", 23)])
+    model_def = helper.make_model(graph_def, producer_name="MS", ir_version = 10, opset_imports=[helper.make_opsetid("", 21)])
 
     onnx.save(model_def, model_file_name)
 
