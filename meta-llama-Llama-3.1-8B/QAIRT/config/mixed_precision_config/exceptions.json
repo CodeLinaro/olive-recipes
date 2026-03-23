@@ -29,7 +29,7 @@
       "module_name": "\\w*lm_head_(MatMul|conv_Conv|conv2d_Conv|Conv)",
       "exceptions": {
         "param_exceptions": {
-          "bitwidth": 8
+          "bitwidth": 4
         },
         "input_exceptions": null,
         "output_exceptions": null
