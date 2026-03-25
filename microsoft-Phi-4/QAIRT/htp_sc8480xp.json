@@ -9,7 +9,7 @@
             "script_path": "phi4_script.py",
             "script_config": {
                 "MODEL_ID": "microsoft/Phi-4-reasoning",
-                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260216/"
+                "QNN_SDK_ROOT": "/home/jovyan/sdks/qairt/2.45.0.260310/"
             }
         },
         "qgab": {
@@ -17,6 +17,8 @@
             "log_level": "debug",
             "backend": "HTP",
             "soc_details": "chipset:SC8480XP",
+	    "extended_udma": true,
+	    "sequence_lengths": [32, 128],
             "multi_graph": true
         },
         "qe": {

@@ -28,17 +28,17 @@ uv venv -p 3.10 $VENV_DIR
 source $VENV_DIR/bin/activate
 
 # Install dependencies
-uv pip install -r requirements.txt
 uv pip install ../../../../olive/Olive/dist/olive_ai-0.11.0.dev0-py3-none-any.whl
 uv pip install qairt-dev[onnx]
+uv pip install -r requirements.txt
 
 # Set QAIRT SDK root
-export QAIRT_SDK_ROOT=/local/mnt2/workspace2/kromero/sdks/2.45.0.260304/
+export QAIRT_SDK_ROOT=/home/jovyan/sdks/qairt/2.45.0.260318-rc3
 
 # Handle PYTHONPATH based on dev mode
 if $DEV_MODE; then
     echo "Dev mode enabled: Setting PYTHONPATH"
-    export PYTHONPATH=/local/mnt2/workspace2/kromero/qairt-tools/QAIRT_Tools/core/src/python/
+    export PYTHONPATH=/home/jovyan/qairt-tools/core/src/python
 else
     echo "Dev mode not enabled: Unsetting PYTHONPATH"
     unset PYTHONPATH

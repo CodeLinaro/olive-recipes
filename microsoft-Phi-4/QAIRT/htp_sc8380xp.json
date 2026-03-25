@@ -17,6 +17,7 @@
             "log_level": "debug",
             "backend": "HTP",
             "soc_details": "chipset:SC8380XP",
+	    "sequence_lengths": [32, 128],
             "multi_graph": true
         },
         "qe": {
