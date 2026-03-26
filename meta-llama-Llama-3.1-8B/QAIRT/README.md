@@ -40,6 +40,8 @@ qairt-vm fetch -v <version>
 # Set QAIRT_SDK_ROOT to download location of QAIRT SDK
 # By default, /opt/qcom/aistack/qairt/<version>
 export QAIRT_SDK_ROOT=/path/to/qairt/sdk
+
+# TODO Had to install a 2.x version of torch here - not sure why I got a 1.x version from these instructions
 ```
 
 3. Install model-specific requirements
