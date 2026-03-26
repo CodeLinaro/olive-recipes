@@ -39,6 +39,7 @@ qairt-vm fetch -v <version>
 
 # Set QAIRT_SDK_ROOT to download location of QAIRT SDK
 # By default, /opt/qcom/aistack/qairt/<version>
+# Note: Running env_setup.sh script inside of QAIRT SDK is not required when using qairt-dev
 export QAIRT_SDK_ROOT=/path/to/qairt/sdk
 
 # TODO Had to install 2.1.x version of torch here - not sure why I got a 1.x version from these instructions

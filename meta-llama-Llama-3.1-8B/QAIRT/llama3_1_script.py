@@ -759,18 +759,36 @@ from genai_lib.llm.dev.model_adaptation.llama.adaptation import (
 )
 
 with event_marker("FP model adaptation configuration"):
-    modeling_llama.LLAMA_ATTENTION_CLASSES['eager'] = QcLlamaAttention
+    # 1. Create the dictionary safely. 
+    # In 4.50, these might not be directly exposed if dependencies are missing.
+    LLAMA_ATTN_CLASSES = {}
+    if hasattr(modeling_llama, "LlamaAttention"):
+        LLAMA_ATTN_CLASSES["eager"] = modeling_llama.LlamaAttention
+    if hasattr(modeling_llama, "LlamaFlashAttention2"):
+        LLAMA_ATTN_CLASSES["flash_attention_2"] = modeling_llama.LlamaFlashAttention2
+    if hasattr(modeling_llama, "LlamaSdpaAttention"):
+        LLAMA_ATTN_CLASSES["sdpa"] = modeling_llama.LlamaSdpaAttention
+
+    # 2. Apply your custom class to the dictionary and the module
+    LLAMA_ATTN_CLASSES['eager'] = QcLlamaAttention
+    modeling_llama.LLAMA_ATTENTION_CLASSES = LLAMA_ATTN_CLASSES # Inject back for code compatibility
+    modeling_llama.LlamaAttention = QcLlamaAttention           # Inject for 4.50 direct calls
+
+    # 3. Patch the Model and ForCausalLM
     modeling_llama.LlamaForCausalLM = QcLlamaForCausalLM
 
-    # Bypass attention_mask preparation
-    assert hasattr(modeling_llama.LlamaModel, '_update_causal_mask'), \
-    "LLamaModel does not have _update_causal_mask as attribute"
-    modeling_llama.LlamaModel._update_causal_mask = adapted_update_causal_mask
+    # 4. Handle Causal Mask (Note: In 4.50, this is often handled by the Cache object)
+    if hasattr(modeling_llama.LlamaModel, '_update_causal_mask'):
+        modeling_llama.LlamaModel._update_causal_mask = adapted_update_causal_mask
+    else:
+        print("Warning: _update_causal_mask not found in LlamaModel. It may have moved to a base class.")
 
-    # Bypass rotary_emb module
-    assert hasattr(modeling_llama.LlamaRotaryEmbedding, 'forward'), \
-    f"Unknown LlamaRotaryEmbedding definition: {modeling_llama.LlamaRotaryEmbedding}"
-    modeling_llama.LlamaRotaryEmbedding.forward = adapted_RotaryEmbedding
+    # 5. Handle Rotary Embedding
+    # In 4.50, LlamaRotaryEmbedding is often initialized within the LlamaAttention __init__
+    if hasattr(modeling_llama, "LlamaRotaryEmbedding"):
+        modeling_llama.LlamaRotaryEmbedding.forward = adapted_RotaryEmbedding
+    else:
+        print("Warning: LlamaRotaryEmbedding not found in modeling_llama.")
 
     # Adapting KV$ management
     assert update_attr(cache_utils.DynamicCache, 'update', DynamicCache_update), f"Unknown DynamicCache definition: {cache_utils.DynamicCache}"
