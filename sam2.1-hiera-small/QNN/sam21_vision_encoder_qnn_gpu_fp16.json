@@ -1,0 +1,37 @@
+{
+    "input_model": {
+        "type": "ONNXModel",
+        "model_path": "sam21_vision_encoder.onnx"
+    },
+    "systems": {
+        "local_system": {
+            "type": "LocalSystem"
+        }
+    },
+    "passes": {
+        "f16": {
+            "type": "OnnxFloatToFloat16"
+        },
+        "surgeries" : {
+            "type": "GraphSurgeries",
+            "surgeries": [
+                {
+                    "surgeon": "MatMulAddToGemm"
+                },
+                {
+                    "surgeon": "RenameOutputs",
+                    "old_names": [ "4922", "4926", "4924" ],
+                    "new_names": [ "image_embeddings", "high_res_features1", "high_res_features2" ]
+                }
+            ]
+        }
+    },
+    "host": "local_system",
+    "target": "local_system",
+    "log_severity_level": 0,
+    "ort_log_severity_level": 1,
+    "ort_py_log_severity_level": 1,
+    "cache_dir": "cache_encoder",
+    "output_dir": "model/encoder",
+    "no_artifacts": true
+}

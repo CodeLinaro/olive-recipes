@@ -33,8 +33,13 @@ This command will return the path to the Python executable. Set the parent direc
 ### Generate ONNX Model
 Activate the **Quantization Python Environment** and run command to generate encoder and decoder models:
 
+#### NPU
 ```bash
-python generate_model.py
+python generate_model.py --device npu
+```
+#### GPU
+```bash
+python generate_model.py --device gpu
 ```
 
 ### Run the Quantization + Compilation Config
