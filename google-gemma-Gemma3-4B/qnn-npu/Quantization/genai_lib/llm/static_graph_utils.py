@@ -559,3 +559,43 @@ def slice_tensors(slice_length, max_length, tensor_dict, remainder_first=True, *
             sliced_dict[var_name] = tensor.narrow(slice_dim, start_idx, end_idx - start_idx)
 
         yield sliced_dict
+
+def llm_slice_inputs_for_prefix_inference(max_input_tokens, model_context_len, 
+                                           inputs_embeds=None, input_ids=None,
+                                           attention_mask=None, position_ids=None,
+                                           past_seen_tokens=None, n_prefix=1):
+    """
+    Slice inputs for prefix inference — skips the first n_prefix tokens since
+    they are already in the prefix KV-cache.
+    """
+    input = inputs_embeds if inputs_embeds is not None else input_ids
+    input_length = input.shape[1]
+    batch_size = input.shape[0]
+    device = input.device
+
+    # Skip the first n_prefix tokens (already in prefix KV-cache)
+    if n_prefix != 0:
+        if inputs_embeds is not None:
+            inputs_embeds = inputs_embeds[:, n_prefix:max_input_tokens + n_prefix]
+        else:
+            input_ids = input_ids[:, n_prefix:max_input_tokens + n_prefix]
+        input_length = input_length - n_prefix
+
+    if attention_mask is None:
+        attention_mask = torch.ones((batch_size, input_length + n_prefix), dtype=torch.long, device=device)
+
+    if position_ids is None:
+        position_ids = torch.cumsum(attention_mask, dim=1) - 1
+        if past_seen_tokens is not None:
+            position_ids += past_seen_tokens
+
+    output_slice = {
+        'attn_mask_slice': attention_mask[:, :max_input_tokens],
+        'position_ids_slice': position_ids[:, :max_input_tokens],
+    }
+    if inputs_embeds is not None:
+        output_slice['inputs_embeds_slice'] = inputs_embeds[:, :max_input_tokens]
+    else:
+        output_slice['input_ids_slice'] = input_ids[:, :max_input_tokens]
+
+    yield output_slice
