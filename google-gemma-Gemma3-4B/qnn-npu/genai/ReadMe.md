@@ -106,7 +106,7 @@ gemma_test_env\Scripts\activate
 
 ### Install Required Wheel File
 
-⚠️ Build wheel file using [onnxruntime-genai](https://github.com/CodeLinaro/onnxruntime-genai/commit/1b73c328bdc2ded86304312721d7051c1f9b95f0) commit
+⚠️ Build wheel file using [onnxruntime-genai](https://github.com/CodeLinaro/onnxruntime-genai/tree/chilukam/multimodel-decoding-pipeline) branch
 
 ```bash
 pip install --force-reinstall onnxruntime_genai-0.10.0.dev0-cp312-cp312-win_arm64.whl
