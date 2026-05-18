@@ -109,7 +109,14 @@ gemma_test_env\Scripts\activate
 ⚠️ Build wheel file using [onnxruntime-genai](https://github.com/CodeLinaro/onnxruntime-genai/tree/chilukam/multimodel-decoding-pipeline) branch
 
 ```bash
+pip install onnxruntime-qnn==1.24.3
 pip install --force-reinstall onnxruntime_genai-0.10.0.dev0-cp312-cp312-win_arm64.whl
+```
+
+### Model Execution
+
+```bash
+python solution.py --model_path "./" --image_paths "cat.jpg" --prompt "Briefly tell what is shown in this image?"
 ```
 
 > Provided wheel file is for Python 3.12 Arm

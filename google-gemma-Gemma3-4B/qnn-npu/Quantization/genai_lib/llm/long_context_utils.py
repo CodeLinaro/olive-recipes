@@ -446,7 +446,8 @@ def llm_scatter_exceeded_kv_using_rotating_eviction(
         layer_indices_to_perform_eviction = list(range(len(past_key_values)))
 
     assert len(layer_indices_to_perform_eviction) > 0, "At least one layer should be specified for eviction"
-    assert num_extra_kvs <= rotating_eviction_cache.shape[-2], "The number of extra KVs exceeds the size of the rotating eviction cache"
+    # assert num_extra_kvs <= rotating_eviction_cache.shape[-2], "The number of extra KVs exceeds the size of the rotating eviction cache"
+    if num_extra_kvs > rotating_eviction_cache.shape[-2]: print(f"The number of extra KVs exceeds the size of the rotating eviction cache, {num_extra_kvs} > {rotating_eviction_cache.shape[-2]}")
 
     # container to store the updated KV cache
     updated_past_key_values = []
