@@ -25,7 +25,18 @@
         "qe": {
             "type": "QairtEncapsulation",
             "log_level": "ERROR",
-            "run_checker": "true"
+            "run_checker": "true",
+            "htp_execution_overrides": {
+                "cpu_mask": "0xe0",
+                "n_threads": 0,
+                "allow_async_init": false,
+                "poll": false,
+                "mmap_budget": 0
+            },
+            "backend_extensions_overrides": {
+                "reused_io_limit_mb": 100,
+                "rpc_control_latency": 100
+            }
         }
     },
     "log_severity_level": 1,

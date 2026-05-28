@@ -15,7 +15,7 @@ Finally, a prepared QAIRT DLC is encapsulated in an ONNX protobuf and exported t
 **Validated host configuration:**
 * Ubuntu 22.04
 * Python 3.10.12
-* qairt-dev 0.5.0
+* qairt-dev 0.8.0
 * QAIRT 2.45.40
 
 **Validated target configuration:**
@@ -37,7 +37,7 @@ huggingface-cli login  # Recommended: stores credentials securely, avoids shell 
 ```bash
 pip install olive-ai[qairt]
 pip list | grep qairt-dev  # Ensure the proper qairt-dev version  was installed
-pip install qairt-dev[onnx]==0.5.0  # Install the proper qairt-dev version, if not installed
+pip install qairt-dev[onnx]==0.8.0  # Install the proper qairt-dev version, if not installed
 ```
 
 3. (Optional) Use qairt-vm to install a non-default version of QAIRT and set QAIRT_SDK_ROOT
