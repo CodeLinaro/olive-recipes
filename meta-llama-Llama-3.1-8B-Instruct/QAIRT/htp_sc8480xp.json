@@ -24,12 +24,14 @@
             "type": "QairtEncapsulation",
             "log_level": "ERROR",
             "run_checker": "true",
-            "htp_execution_overrides": {
-                "cpu_mask": "0xe0",
+            "engine_config_overrides": {
                 "n_threads": 0,
-                "allow_async_init": false,
-                "poll": false,
-                "mmap_budget": 0
+                "htp": {
+                    "cpu_mask": "0xe0",
+                    "allow_async_init": false,
+                    "poll": false,
+                    "mmap_budget": 0
+                }
             },
             "backend_extensions_overrides": {
                 "reused_io_limit_mb": 100,
