@@ -59,7 +59,8 @@ export QAIRT_SDK_ROOT=/path/to/qairt/sdk
 
 ```bash
 pip install -r requirements.txt
-pip install torch==2.1.0
+# Re-pin torch stack — requirements.txt may downgrade these
+pip install torch==2.4.1 torchvision==0.19.1 triton==3.0.0
 ```
 
 5. Run Olive recipe

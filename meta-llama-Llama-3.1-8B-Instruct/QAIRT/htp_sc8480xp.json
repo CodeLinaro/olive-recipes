@@ -34,8 +34,10 @@
                 }
             },
             "backend_extensions_overrides": {
-                "reused_io_limit_mb": 100,
-                "rpc_control_latency": 100
+                "context": [{"reused_io_limit_mb": 100}],
+                "graphs": null,
+                "devices": [{"pd_session": "unsigned"}],
+                "groupContext": {"share_resources": false}
             }
         }
     },
