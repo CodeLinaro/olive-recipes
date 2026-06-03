@@ -22,7 +22,7 @@ uv pip install -r example2_env_req.txt
 
 ## 2. Set Up QNN SDK Environment
 
-⚠️ **Important:** For QNN SDK installation refer to **example1\ReamMe.md**
+⚠️ **Important:** For QNN SDK installation refer to **Quantization\ReamMe.md**
 
 ```bash
 export QNN_SDK_ROOT="/tmp/qnn"

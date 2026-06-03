@@ -114,14 +114,22 @@ Example expected structure:
 
 ***
 
+### Download and extract dataset for AdaScale
+
+```bash
+wget -nc https://huggingface.co/datasets/allenai/c4/resolve/main/en/c4-train.00000-of-01024.json.gz
+gunzip -f c4-train.00000-of-01024.json.gz
+```
+
 ## 6. Run Notebooks in Order
 
 ⚠️ **Important:** After each notebook completes, **kill the kernel** to free GPU memory before starting the next one.
 
 1.  `spinquant.ipynb`
-2.  `gemma3_4b.ipynb`
-3.  `gemma3_veg.ipynb`
-4.  `gemma_4b_embed.ipynb`
+2.  `adascale.ipynb`
+3.  `gemma3_4b.ipynb`
+4.  `gemma3_veg.ipynb`
+5.  `gemma_4b_embed.ipynb`
 
 ***
 

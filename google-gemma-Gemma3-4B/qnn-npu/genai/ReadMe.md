@@ -16,7 +16,7 @@ Ensure the following files are present in the current folder:
 8.  `tokenizer.json`
 9.  `tokenizer_config.json`
 
-> **Next:** Copy all downloaded files from example1 and example2 into the current folder.
+> **Next:** Copy all downloaded files from Quantization and Conversion into the current folder.
 
 ***
 
