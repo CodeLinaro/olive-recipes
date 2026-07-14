@@ -70,6 +70,16 @@ To access models, you'll need to log-in to Hugging Face with a user [access toke
 huggingface-cli login --token <>
 ```
 
+### Modify Gemma model in transformer library
+
+Copy modified *modeling_gemma3.py* to transformers library for gemma3 model
+
+```bash
+cp modeling_gemma3.py venv_gemma/lib/python3.10/site-packages/transformers/models/gemma3/modeling_gemma3.py
+```
+
+> ⚠️ **Caution:** If transformers library is installed in a different location, copy the *modeling_gemma3.py* to the corresponding location
+
 ### Launch Jupyter Lab
 
 ```bash
@@ -91,9 +101,10 @@ Replace:
 
 ```python
 dataset_path = "<path to folder containing the coco dataset root folder>"
+extra_data_files = ["<list of path to json/jsonl files for additional dataset>"]
 ```
 
-With the actual path where COCO dataset root folder is located.
+With the actual path where COCO dataset root folder is located and additional dataset files used to finetune the model. Leave as empty list if no additional datasets are used.
 
 ### Verify dataset structure:
 
@@ -114,22 +125,14 @@ Example expected structure:
 
 ***
 
-### Download and extract dataset for AdaScale
-
-```bash
-wget -nc https://huggingface.co/datasets/allenai/c4/resolve/main/en/c4-train.00000-of-01024.json.gz
-gunzip -f c4-train.00000-of-01024.json.gz
-```
-
 ## 6. Run Notebooks in Order
 
-⚠️ **Important:** After each notebook completes, **kill the kernel** to free GPU memory before starting the next one.
+> ⚠️ **Important:** After each notebook completes, **kill the kernel** to free GPU memory before starting the next one.
 
 1.  `spinquant.ipynb`
-2.  `adascale.ipynb`
-3.  `gemma3_4b.ipynb`
-4.  `gemma3_veg.ipynb`
-5.  `gemma_4b_embed.ipynb`
+2.  `gemma3_4b.ipynb`
+3.  `gemma3_veg.ipynb`
+4.  `gemma_4b_embed.ipynb`
 
 ***
 

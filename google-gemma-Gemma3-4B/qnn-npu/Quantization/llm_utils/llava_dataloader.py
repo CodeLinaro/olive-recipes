@@ -11,7 +11,7 @@ import os
 import torch
 from itertools import chain
 from torch.utils.data import DataLoader, Dataset
-from datasets import IterableDataset, load_dataset
+from datasets import IterableDataset, load_dataset, concatenate_datasets
 from transformers import default_data_collator
 from PIL import Image as PILImage
 from transformers.feature_extraction_utils import BatchFeature
@@ -88,6 +88,55 @@ def get_llava_dataset(tokenzier, processor, data_files, dataset_path, cache_dir,
     dataset = dataset.map(_map)
     return dataset.with_transform(_load_image_and_tokenize)
 
+def get_extra_llava_dataset(tokenzier, processor, data_files, extra_data_files, dataset_path, cache_dir, prompt_test=False, num_extra_samples = 20):
+    def _map(examples):
+        if not prompt_test:  # For calibration/optimization
+            examples['message'] = [_convert_one_conversation(conversation=conversation, image_dir=os.path.join(dataset_path, examples["image"]))
+                                for conversation in examples['conversations']]
+        else:  # For prompt testing
+            examples['question'] = examples['conversations'][0]['value']   # set 1st question as prompt
+            examples['annotation'] = examples['conversations'][1]['value']   # set gpt response to 1st question as annotation
+
+        return examples
+
+    def extra_map(data):
+        data['message'] = []
+        for message in data['messages']:
+            data['message'].append({'role': message['role'], 'content': [{'type': 'text', 'text': message['content'], 'image': ""}]})
+        return data
+
+    def _load_image_and_tokenize(example):
+        if not prompt_test:  # For calibration/optimization
+            inputs = processor.apply_chat_template(
+                example['message'], add_generation_prompt=True, tokenize=True,
+                return_dict=True, return_tensors="pt"
+            )
+            inputs = {k: v.unsqueeze(0) for k, v in inputs.items()}
+        else:  # For prompt testing
+            inputs = {}
+            inputs['question'] = example['question']
+            inputs['annotation'] = example['annotation']
+            inputs['image_file'] = [os.path.join(dataset_path, example["image"][0])]
+
+        return inputs
+
+    dataset = load_dataset("json", data_files=data_files, cache_dir=cache_dir, split='train')
+    dataset = dataset.map(_map)
+
+    if len(extra_data_files) > 0:
+        extra_datasets = []
+        for extra_data_file in extra_data_files:
+            extra_dataset = load_dataset("json", data_files=extra_data_file, cache_dir=cache_dir, split = 'train')
+            extra_dataset = extra_dataset.map(extra_map)
+            extra_dataset = extra_dataset.shuffle(42)
+            extra_dataset = extra_dataset.select(range(num_extra_samples))
+            extra_datasets.append(extra_dataset)
+        extra_dataset = concatenate_datasets(extra_datasets)
+        final_dataset = concatenate_datasets([dataset, extra_dataset])
+    else:
+        final_dataset = dataset
+
+    return final_dataset.with_transform(_load_image_and_tokenize)
 
 def add_chat_template_llava(question):
     message = [
