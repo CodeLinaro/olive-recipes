@@ -215,12 +215,14 @@ class Gemma3DecoderLayer(Gemma3DecoderLayer_original):
         )
 
         hidden_states = self.post_attention_layernorm(hidden_states)
+        hidden_states = hidden_states/8
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.pre_feedforward_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         hidden_states = self.post_feedforward_layernorm(hidden_states)
+        hidden_states = hidden_states/8
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -360,6 +362,8 @@ class Gemma3TextModel(Gemma3TextModel_original):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
+
+        hidden_states = hidden_states/8
 
         for decoder_layer in self.layers[: self.config.num_hidden_layers]:
             if output_hidden_states:
