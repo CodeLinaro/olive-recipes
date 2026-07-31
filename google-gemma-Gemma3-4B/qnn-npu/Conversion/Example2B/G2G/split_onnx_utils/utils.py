@@ -1245,7 +1245,7 @@ def fill_input_encodings_of_split(onnxmodel, encoding_file, output_tensor_list, 
 
 
 
-def split_onnx(onnxfile, modelname, pickle_filedir, num_splits, output_dir='./', split_embedding=False, split_lmhead=False, encoding_file=None, embed_ssd_params_file=None, using_qairt_workflow=False, lora_importer_config=None, splitting_points=None, has_lm_head=True):
+def split_onnx(onnxfile, modelname, pickle_filedir, num_splits, output_dir='./', split_embedding=False, split_lmhead=False, encoding_file=None, embed_ssd_params_file=None, using_qairt_workflow=False, lora_importer_config=None, splitting_points=None, has_lm_head=True, output_tensor_list = None):
 
     def _is_cache(layer, name):
         return re.search(f'_(key|value)_{layer}_', name) != None
@@ -1254,7 +1254,8 @@ def split_onnx(onnxfile, modelname, pickle_filedir, num_splits, output_dir='./',
 
     onnxmodel = _load_model(onnxfile, load_external_data=False)
     input_names, output_names = get_onnx_input_output_names(onnxfile, onnxmodel=onnxmodel, deco_digit=False, using_qairt_workflow=using_qairt_workflow)
-    output_tensor_list = get_split_tensors(onnxfile, onnxmodel=onnxmodel, include_first_input=split_embedding)
+    if not output_tensor_list:
+        output_tensor_list = get_split_tensors(onnxfile, onnxmodel=onnxmodel, include_first_input=split_embedding)
     print('Per_layer_output_names:', output_tensor_list)
 
     # Infer the shape of per-layer tensors

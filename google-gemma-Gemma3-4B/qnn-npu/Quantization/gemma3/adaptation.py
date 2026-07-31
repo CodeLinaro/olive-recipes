@@ -170,6 +170,8 @@ class Gemma3Attention(Gemma3Attention_original):
 class Gemma3DecoderLayer(Gemma3DecoderLayer_original):
     def __init__(self, config, layer_idx: int):
         super(Gemma3DecoderLayer, self).__init__(config, layer_idx)
+        self.layer_idx = layer_idx
+        self.set_scales = { -1: 1, 0: 1, 1: 1, 2: 1, 3: 1, 4: 1, 5: 1, 6: 1, 7: 1, 8: 1, 9: 2, 10: 2, 11: 2, 12: 2, 13: 2, 14: 2, 15: 2, 16: 2, 17: 2, 18: 3, 19: 3, 20: 3, 21: 3, 22: 3, 23: 3, 24: 3, 25: 3, 26: 4, 27: 4, 28: 4, 29: 4, 30: 4, 31: 4, 32: 4, 33: 4}
 
     def forward(
         self,
@@ -191,7 +193,9 @@ class Gemma3DecoderLayer(Gemma3DecoderLayer_original):
         1. we already compute the global layer causal mask outside the model as computing it on HTP is expensive
         2. We cannot infer the sliding causal mask from the global causal mask inside the model trivially, for multi-stream use cases.
         '''
-        
+
+        if self.set_scales[self.layer_idx - 1] != self.set_scales[self.layer_idx]:
+            hidden_states = hidden_states*(self.set_scales[self.layer_idx - 1]/self.set_scales[self.layer_idx])
         residual = hidden_states
 
         hidden_states = self.input_layernorm(hidden_states)
@@ -215,14 +219,14 @@ class Gemma3DecoderLayer(Gemma3DecoderLayer_original):
         )
 
         hidden_states = self.post_attention_layernorm(hidden_states)
-        hidden_states = hidden_states/8
+        hidden_states = hidden_states/self.set_scales[self.layer_idx]
         hidden_states = residual + hidden_states
 
         residual = hidden_states
         hidden_states = self.pre_feedforward_layernorm(hidden_states)
         hidden_states = self.mlp(hidden_states)
         hidden_states = self.post_feedforward_layernorm(hidden_states)
-        hidden_states = hidden_states/8
+        hidden_states = hidden_states/self.set_scales[self.layer_idx]
         hidden_states = residual + hidden_states
 
         outputs = (hidden_states,)
@@ -362,8 +366,6 @@ class Gemma3TextModel(Gemma3TextModel_original):
         # decoder layers
         all_hidden_states = () if output_hidden_states else None
         all_self_attns = () if output_attentions else None
-
-        hidden_states = hidden_states/8
 
         for decoder_layer in self.layers[: self.config.num_hidden_layers]:
             if output_hidden_states:
