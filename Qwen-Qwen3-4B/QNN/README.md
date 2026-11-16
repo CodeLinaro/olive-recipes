@@ -56,6 +56,14 @@ For Snapdragon X2 Elite:
 olive run --config x2_elite_config.json
 ```
 
+### QNN-GPU: Run the Quantization Config
+
+Replace `/path/to/qnn/env/bin` in [config_gpu.json](config_gpu.json) with the path to the directory containing your QNN environment's Python executable, then run:
+
+```bash
+olive run --config config_gpu.json
+```
+
 Olive will run the AOT compilation step in the **AOT Compilation Python Environment** specified in the config file using a subprocess. All other steps will run in the **Quantization Python Environment** natively.
 
 Optimized model saved in: `models/qwen3_4B/`

@@ -1,0 +1,17 @@
+keywords:
+    qnn
+arch: qwen3
+recipes:
+    - file: "x_elite_config.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
+    - file: "x2_elite_config.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
+    - file: "config_gpu.json"
+      devices:
+        - gpu
+      ep: QNNExecutionProvider
+name: qwen3-4b
