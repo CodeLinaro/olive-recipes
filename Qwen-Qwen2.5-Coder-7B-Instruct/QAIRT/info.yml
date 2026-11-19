@@ -1,0 +1,14 @@
+keywords:
+    qairt
+    qnn
+arch: qwen2
+name: Qwen2.5-Coder-7B-Instruct
+recipes:
+    - file: "x_elite_config.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
+    - file: "x2_elite_config.json"
+      devices:
+        - npu
+      ep: QNNExecutionProvider
